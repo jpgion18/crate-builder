@@ -11,12 +11,13 @@ from __future__ import annotations
 import os
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, Response, jsonify, request, render_template
 
 from crate_builder import serato_crate, serato_paths
 from crate_builder.input_parser import parse_input_text
 from crate_builder.library import scan_library
 from crate_builder.matcher import DEFAULT_THRESHOLD, match_tracks
+from crate_builder.missing_log import build_missing_log_csv
 from crate_builder.spotify_client import (
     SpotifyNotConfigured,
     fetch_playlist_tracks,
@@ -183,6 +184,21 @@ def api_build():
         return jsonify(error="exists", path=dest_path), 409
 
     return jsonify(path=dest_path, track_count=len(track_paths))
+
+
+@app.route("/api/missing-log", methods=["POST"])
+def api_missing_log():
+    data = request.get_json(force=True)
+    tracks = data.get("tracks", [])
+    if not tracks:
+        return jsonify(error="No missing tracks to log"), 400
+
+    csv_text = build_missing_log_csv(tracks)
+    return Response(
+        csv_text,
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=missing_tracks.csv"},
+    )
 
 
 if __name__ == "__main__":

@@ -211,3 +211,46 @@ async function buildCrate(overwrite = false) {
 }
 
 $("build_btn").addEventListener("click", () => buildCrate(false));
+
+async function downloadMissingLog() {
+  const checkboxes = document.querySelectorAll('#results_table input[type="checkbox"]');
+  const missing = [];
+  checkboxes.forEach((cb) => {
+    if (!cb.checked) {
+      const m = lastMatches[Number(cb.dataset.index)];
+      missing.push({ artist: m.input_artist, title: m.input_title, raw: m.raw });
+    }
+  });
+
+  if (missing.length === 0) {
+    setStatus($("build_status"), "Nothing unchecked — no missing tracks to log.");
+    return;
+  }
+
+  setStatus($("build_status"), "Preparing log...");
+  try {
+    const res = await fetch("/api/missing-log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tracks: missing }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || `Request failed (${res.status})`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "missing_tracks.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setStatus($("build_status"), `Logged ${missing.length} missing track(s).`);
+  } catch (err) {
+    setStatus($("build_status"), err.message, true);
+  }
+}
+
+$("missing_log_btn").addEventListener("click", downloadMissingLog);
