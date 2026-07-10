@@ -23,6 +23,7 @@ from crate_builder.spotify_client import (
     fetch_playlist_tracks,
     is_spotify_url,
 )
+from spotipy.exceptions import SpotifyException
 
 load_dotenv()
 
@@ -92,6 +93,19 @@ def api_preview():
         input_tracks = _resolve_input_tracks(input_text)
     except SpotifyNotConfigured as exc:
         return jsonify(error=str(exc)), 400
+    except SpotifyException as exc:
+        if exc.http_status == 403:
+            message = (
+                "Spotify refused to fetch that playlist (403 Forbidden). This app "
+                "can only read PUBLIC playlists. Open the playlist in Spotify, "
+                "check its sharing settings, and make sure it's set to Public "
+                "(not private) — or paste the track list as plain text/CSV instead."
+            )
+        elif exc.http_status == 404:
+            message = "Spotify couldn't find that playlist — double check the URL."
+        else:
+            message = f"Spotify API error ({exc.http_status}): {exc.msg}"
+        return jsonify(error=message), 400
 
     if not input_tracks:
         return jsonify(error="Couldn't parse any tracks from that input"), 400
