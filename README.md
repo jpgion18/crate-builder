@@ -53,7 +53,12 @@ required, and it only works for public playlists.
 python app.py
 ```
 
-Open http://127.0.0.1:5000 in your browser.
+Open http://127.0.0.1:5001 in your browser.
+
+(Port 5001, not 5000 — macOS reserves 5000 for AirPlay Receiver and will
+return a confusing 403 if you try to use it. If you'd rather free up 5000
+instead, turn off AirPlay Receiver in System Settings → General → AirDrop &
+Handoff.)
 
 1. Set your **music library folder** (defaults to `~/Music`) and click
    **Scan Library**.

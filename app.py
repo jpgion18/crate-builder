@@ -202,4 +202,6 @@ def api_missing_log():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Port 5000 is reserved by macOS AirPlay Receiver and will silently
+    # 403 requests before they reach Flask, so default to 5001 instead.
+    app.run(debug=True, port=5001)
