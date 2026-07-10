@@ -57,6 +57,14 @@ can see in the Spotify app. Your login token is cached locally in
 
 ## Running it
 
+**Easiest: double-click `start.command`** in Finder (after the one-time
+setup above). It activates the virtual environment, starts the server, and
+opens your browser automatically — no Terminal typing needed. If macOS
+warns about an unidentified developer the first time, right-click
+`start.command` → **Open** instead of double-clicking, and confirm once.
+
+Or manually:
+
 ```bash
 python app.py
 ```
