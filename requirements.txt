@@ -1,0 +1,5 @@
+Flask==3.0.3
+mutagen==1.47.0
+rapidfuzz==3.9.6
+spotipy==2.24.0
+python-dotenv==1.0.1

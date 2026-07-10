@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crate Builder</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <main>
+    <h1>Crate Builder</h1>
+    <p class="subtitle">
+      Paste a CSV, a Spotify playlist link, or a plain track list. It'll be
+      fuzzy-matched against your local music library and turned into a
+      Serato crate.
+    </p>
+
+    <section class="panel">
+      <div class="field">
+        <label for="library_dir">Music library folder</label>
+        <input id="library_dir" type="text" value="{{ default_library_dir }}" />
+        <button id="scan_btn" type="button">Scan Library</button>
+        <span id="scan_status" class="status"></span>
+      </div>
+
+      <div class="field">
+        <label for="serato_dir">Serato "_Serato_" folder</label>
+        <input id="serato_dir" type="text" value="{{ default_serato_dir }}" />
+      </div>
+
+      <div class="field">
+        <label for="crate_name">Crate name</label>
+        <input id="crate_name" type="text" placeholder="e.g. Summer Set 2026" />
+      </div>
+
+      <div class="field">
+        <label for="threshold">Match sensitivity ({{ default_threshold }})</label>
+        <input id="threshold" type="range" min="40" max="100" value="{{ default_threshold }}" />
+        <span id="threshold_value">{{ default_threshold }}</span>
+      </div>
+
+      <div class="field">
+        <label for="input_text">Paste CSV, Spotify playlist URL, or track list</label>
+        <textarea id="input_text" rows="10" placeholder="https://open.spotify.com/playlist/...&#10;or&#10;Artist - Title&#10;Artist - Title&#10;or a CSV with Title/Artist columns"></textarea>
+      </div>
+
+      <button id="preview_btn" type="button">Preview Matches</button>
+      <span id="preview_status" class="status"></span>
+    </section>
+
+    <section id="results_panel" class="panel hidden">
+      <div class="results_header">
+        <h2>Matches</h2>
+        <span id="results_summary"></span>
+      </div>
+      <table id="results_table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Your track</th>
+            <th>Matched library track</th>
+            <th>Score</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <button id="build_btn" type="button">Build Crate</button>
+      <span id="build_status" class="status"></span>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
