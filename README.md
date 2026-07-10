@@ -36,16 +36,24 @@ pip install -r requirements.txt
 ### Optional: Spotify playlist support
 
 Pasting plain text or CSV works with no setup. To paste a Spotify playlist
-URL directly, create a free app at
-https://developer.spotify.com/dashboard, then:
+URL directly:
 
-```bash
-cp .env.example .env
-# edit .env and fill in SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET
-```
+1. Create a free app at https://developer.spotify.com/dashboard.
+2. In the app's **Settings**, add this exact Redirect URI:
+   `http://127.0.0.1:5001/callback`
+3. Copy its Client ID and Client Secret:
+   ```bash
+   cp .env.example .env
+   # edit .env and fill in SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET
+   ```
+4. Run the app and click **Connect Spotify** in the page — it'll send you to
+   Spotify to log in once, then bring you back.
 
-This uses Spotify's app-only ("Client Credentials") auth — no Spotify login
-required, and it only works for public playlists.
+This uses a real (one-time) Spotify login rather than app-only auth,
+because Spotify's API no longer allows app-only tokens to read playlists
+they don't own — even public ones. Logging in lets it read any playlist you
+can see in the Spotify app. Your login token is cached locally in
+`.spotify_token_cache` (gitignored) so you won't need to log in every run.
 
 ## Running it
 

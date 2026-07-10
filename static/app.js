@@ -13,6 +13,30 @@ function setStatus(el, message, isError = false) {
   el.classList.toggle("error", isError);
 }
 
+async function refreshSpotifyStatus() {
+  try {
+    const res = await fetch("/api/spotify-status");
+    const data = await res.json();
+    const statusEl = $("spotify_status");
+    const btnEl = $("spotify_connect_btn");
+    if (data.connected) {
+      statusEl.textContent = "Connected";
+      btnEl.textContent = "Reconnect Spotify";
+    } else {
+      statusEl.textContent = "Not connected — required only for Spotify playlist URLs";
+      btnEl.textContent = "Connect Spotify";
+    }
+  } catch (err) {
+    // Spotify status is best-effort; ignore failures here.
+  }
+}
+
+$("spotify_connect_btn").addEventListener("click", () => {
+  window.location.href = "/login";
+});
+
+refreshSpotifyStatus();
+
 async function postJSON(url, body) {
   const res = await fetch(url, {
     method: "POST",

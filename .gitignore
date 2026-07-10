@@ -3,6 +3,7 @@ __pycache__/
 .venv/
 venv/
 .env
+.spotify_token_cache
 *.crate
 .DS_Store
 .pytest_cache/

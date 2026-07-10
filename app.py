@@ -3,7 +3,7 @@ it against your local music library, and build a Serato crate from the results.
 
 Run with:
     python app.py
-Then open http://127.0.0.1:5000 in your browser.
+Then open http://127.0.0.1:5001 in your browser.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 
 from dotenv import load_dotenv
-from flask import Flask, Response, jsonify, request, render_template
+from flask import Flask, Response, jsonify, redirect, request, render_template
 
 from crate_builder import serato_crate, serato_paths
 from crate_builder.input_parser import parse_input_text
@@ -20,7 +20,11 @@ from crate_builder.matcher import DEFAULT_THRESHOLD, match_tracks
 from crate_builder.missing_log import build_missing_log_csv
 from crate_builder.spotify_client import (
     SpotifyNotConfigured,
+    SpotifyNotConnected,
     fetch_playlist_tracks,
+    get_login_url,
+    handle_callback,
+    is_connected,
     is_spotify_url,
 )
 from spotipy.exceptions import SpotifyException
@@ -59,6 +63,31 @@ def index():
     )
 
 
+@app.route("/login")
+def login():
+    try:
+        return redirect(get_login_url())
+    except SpotifyNotConfigured as exc:
+        return str(exc), 400
+
+
+@app.route("/callback")
+def callback():
+    code = request.args.get("code")
+    error = request.args.get("error")
+    if error:
+        return f"Spotify login failed: {error}", 400
+    if not code:
+        return "Spotify login failed: no authorization code received.", 400
+    handle_callback(code)
+    return redirect("/")
+
+
+@app.route("/api/spotify-status")
+def api_spotify_status():
+    return jsonify(connected=is_connected())
+
+
 @app.route("/api/scan", methods=["POST"])
 def api_scan():
     data = request.get_json(force=True)
@@ -91,15 +120,15 @@ def api_preview():
 
     try:
         input_tracks = _resolve_input_tracks(input_text)
-    except SpotifyNotConfigured as exc:
+    except (SpotifyNotConfigured, SpotifyNotConnected) as exc:
         return jsonify(error=str(exc)), 400
     except SpotifyException as exc:
         if exc.http_status == 403:
             message = (
-                "Spotify refused to fetch that playlist (403 Forbidden). This app "
-                "can only read PUBLIC playlists. Open the playlist in Spotify, "
-                "check its sharing settings, and make sure it's set to Public "
-                "(not private) — or paste the track list as plain text/CSV instead."
+                "Spotify refused to fetch that playlist (403 Forbidden). Make sure "
+                "you're logged in as an account that can see this playlist (click "
+                "'Connect Spotify' again if unsure), or paste the track list as "
+                "plain text/CSV instead."
             )
         elif exc.http_status == 404:
             message = "Spotify couldn't find that playlist — double check the URL."
