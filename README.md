@@ -25,6 +25,25 @@ you use that input method).
    `_Serato_/Subcrates` folder, so it shows up as a new crate next time you
    open Serato.
 
+## Discover tab
+
+A separate **Discover** page (nav link at the top) for finding new music
+from what other working DJs are actually playing — useful for breaking out
+of a rut. Paste in a tracklist copied from 1001tracklists, a Beatport chart,
+a Mixcloud/SoundCloud mix description, or a Spotify playlist URL, tag it
+with a source (e.g. "Solomun @ Tomorrowland 2026"), and it checks each
+track against your library. Anything you don't already have gets added to
+a persistent **Discovery Log** — a running "to check out" list stored
+locally in `discovery_log.json` (gitignored) that survives across
+sessions, dedupes overlapping tracklists automatically, and lets you mark
+each entry as new / acquired / dismissed as you work through it. Export it
+to CSV anytime.
+
+This is paste-based rather than a live crawler — sites like
+1001tracklists and Beatport don't offer public APIs, and scraping them
+would be a ToS/legal gray area, so you bring the tracklist and this tool
+does the cross-referencing.
+
 ## Setup
 
 ```bash

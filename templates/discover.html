@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Discover - Crate Builder</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <main>
+    <nav class="top-nav">
+      <a href="/">Crate Builder</a>
+      <a href="/discover" class="active">Discover</a>
+    </nav>
+    <h1>Discover</h1>
+    <p class="subtitle">
+      Paste a tracklist from a set, chart, or playlist — from 1001tracklists,
+      Beatport, Mixcloud, SoundCloud, or a Spotify playlist URL. Anything
+      you don't already have gets added to your running discovery log below.
+    </p>
+
+    <section class="panel">
+      <div class="field">
+        <label for="library_dir">Music library folder</label>
+        <input id="library_dir" type="text" value="{{ default_library_dir }}" />
+        <button id="scan_btn" type="button">Scan Library</button>
+        <span id="scan_status" class="status"></span>
+      </div>
+
+      <div class="field">
+        <label for="threshold">Match sensitivity ({{ default_threshold }})</label>
+        <input id="threshold" type="range" min="40" max="100" value="{{ default_threshold }}" />
+        <span id="threshold_value">{{ default_threshold }}</span>
+      </div>
+
+      <div class="field">
+        <label for="source_label">Source</label>
+        <input id="source_label" type="text" placeholder="e.g. Solomun @ Tomorrowland 2026, or Beatport Tech House Chart" />
+      </div>
+
+      <div class="field">
+        <label for="input_text">Paste tracklist / chart / Spotify playlist URL</label>
+        <textarea id="input_text" rows="10" placeholder="https://open.spotify.com/playlist/...&#10;or&#10;Artist - Title&#10;Artist - Title&#10;or paste a copied tracklist / CSV"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Spotify</label>
+        <button id="spotify_connect_btn" type="button">Connect Spotify</button>
+        <span id="spotify_status" class="status"></span>
+      </div>
+
+      <button id="preview_btn" type="button">Find New Tracks</button>
+      <span id="preview_status" class="status"></span>
+    </section>
+
+    <section id="results_panel" class="panel hidden">
+      <div class="results_header">
+        <h2>Candidates</h2>
+        <span id="results_summary"></span>
+      </div>
+      <table id="results_table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Track</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <button id="add_btn" type="button">Add Selected to Discovery Log</button>
+      <span id="add_status" class="status"></span>
+    </section>
+
+    <section class="panel">
+      <div class="results_header">
+        <h2>Discovery Log</h2>
+        <button id="export_btn" type="button">Download Log (CSV)</button>
+      </div>
+      <table id="log_table">
+        <thead>
+          <tr>
+            <th>Track</th>
+            <th>Source</th>
+            <th>Added</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <span id="log_status" class="status"></span>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='discover.js') }}"></script>
+</body>
+</html>

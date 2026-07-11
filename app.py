@@ -13,10 +13,10 @@ import os
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, redirect, request, render_template
 
-from crate_builder import serato_crate, serato_paths
+from crate_builder import discovery_store, serato_crate, serato_paths
 from crate_builder.input_parser import parse_input_text
 from crate_builder.library import scan_library
-from crate_builder.matcher import DEFAULT_THRESHOLD, match_tracks
+from crate_builder.matcher import DEFAULT_THRESHOLD, match_tracks, normalize
 from crate_builder.missing_log import build_missing_log_csv
 from crate_builder.spotify_client import (
     SpotifyNotConfigured,
@@ -53,12 +53,42 @@ def _resolve_input_tracks(input_text: str):
     return parse_input_text(input_text)
 
 
+def _resolve_input_tracks_safe(input_text: str):
+    """Returns (tracks, None) on success, or (None, (message, status)) on a handled error."""
+    try:
+        return _resolve_input_tracks(input_text), None
+    except (SpotifyNotConfigured, SpotifyNotConnected) as exc:
+        return None, (str(exc), 400)
+    except SpotifyException as exc:
+        if exc.http_status == 403:
+            message = (
+                "Spotify refused to fetch that playlist (403 Forbidden). Make sure "
+                "you're logged in as an account that can see this playlist (click "
+                "'Connect Spotify' again if unsure), or paste the track list as "
+                "plain text/CSV instead."
+            )
+        elif exc.http_status == 404:
+            message = "Spotify couldn't find that playlist — double check the URL."
+        else:
+            message = f"Spotify API error ({exc.http_status}): {exc.msg}"
+        return None, (message, 400)
+
+
 @app.route("/")
 def index():
     return render_template(
         "index.html",
         default_library_dir=serato_paths.guess_music_dir(),
         default_serato_dir=serato_paths.guess_serato_dir(),
+        default_threshold=DEFAULT_THRESHOLD,
+    )
+
+
+@app.route("/discover")
+def discover_page():
+    return render_template(
+        "discover.html",
+        default_library_dir=serato_paths.guess_music_dir(),
         default_threshold=DEFAULT_THRESHOLD,
     )
 
@@ -118,23 +148,9 @@ def api_preview():
     except NotADirectoryError as exc:
         return jsonify(error=str(exc)), 400
 
-    try:
-        input_tracks = _resolve_input_tracks(input_text)
-    except (SpotifyNotConfigured, SpotifyNotConnected) as exc:
-        return jsonify(error=str(exc)), 400
-    except SpotifyException as exc:
-        if exc.http_status == 403:
-            message = (
-                "Spotify refused to fetch that playlist (403 Forbidden). Make sure "
-                "you're logged in as an account that can see this playlist (click "
-                "'Connect Spotify' again if unsure), or paste the track list as "
-                "plain text/CSV instead."
-            )
-        elif exc.http_status == 404:
-            message = "Spotify couldn't find that playlist — double check the URL."
-        else:
-            message = f"Spotify API error ({exc.http_status}): {exc.msg}"
-        return jsonify(error=message), 400
+    input_tracks, error = _resolve_input_tracks_safe(input_text)
+    if error:
+        return jsonify(error=error[0]), error[1]
 
     if not input_tracks:
         return jsonify(error="Couldn't parse any tracks from that input"), 400
@@ -174,8 +190,6 @@ def api_preview():
 def api_search():
     """Manual override lookup: top fuzzy candidates for a single free-text query."""
     from rapidfuzz import fuzz, process
-
-    from crate_builder.matcher import normalize
 
     library_dir = request.args.get("library_dir", "").strip()
     query = request.args.get("q", "").strip()
@@ -241,6 +255,100 @@ def api_missing_log():
         csv_text,
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=missing_tracks.csv"},
+    )
+
+
+@app.route("/api/discover/preview", methods=["POST"])
+def api_discover_preview():
+    data = request.get_json(force=True)
+    library_dir = data.get("library_dir", "").strip()
+    input_text = data.get("input_text", "")
+    threshold = int(data.get("threshold", DEFAULT_THRESHOLD))
+
+    if not library_dir:
+        return jsonify(error="library_dir is required"), 400
+    if not input_text.strip():
+        return jsonify(error="Paste a tracklist, chart, or Spotify playlist URL first"), 400
+
+    try:
+        library_tracks = _get_library(library_dir)
+    except NotADirectoryError as exc:
+        return jsonify(error=str(exc)), 400
+
+    input_tracks, error = _resolve_input_tracks_safe(input_text)
+    if error:
+        return jsonify(error=error[0]), error[1]
+
+    if not input_tracks:
+        return jsonify(error="Couldn't parse any tracks from that input"), 400
+
+    results = match_tracks(input_tracks, library_tracks, threshold=threshold)
+    logged_keys = {
+        normalize(f"{e['artist']} {e['title']}") for e in discovery_store.list_entries()
+    }
+
+    candidates = [
+        {
+            "raw": r.input.raw,
+            "artist": r.input.artist,
+            "title": r.input.title,
+            "in_library": r.matched,
+            "already_logged": normalize(f"{r.input.artist} {r.input.title}") in logged_keys,
+        }
+        for r in results
+    ]
+
+    return jsonify(candidates=candidates)
+
+
+@app.route("/api/discover/add", methods=["POST"])
+def api_discover_add():
+    data = request.get_json(force=True)
+    entries = data.get("entries", [])
+    source = data.get("source", "").strip() or "Unspecified"
+    if not entries:
+        return jsonify(error="No tracks selected"), 400
+    result = discovery_store.add_entries(entries, source)
+    return jsonify(result)
+
+
+@app.route("/api/discover/list")
+def api_discover_list():
+    return jsonify(entries=discovery_store.list_entries())
+
+
+@app.route("/api/discover/status", methods=["POST"])
+def api_discover_status():
+    data = request.get_json(force=True)
+    entry_id = data.get("id", "")
+    status = data.get("status", "")
+    try:
+        ok = discovery_store.update_status(entry_id, status)
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+    if not ok:
+        return jsonify(error="Entry not found"), 404
+    return jsonify(ok=True)
+
+
+@app.route("/api/discover/<entry_id>", methods=["DELETE"])
+def api_discover_delete(entry_id):
+    ok = discovery_store.delete_entry(entry_id)
+    if not ok:
+        return jsonify(error="Entry not found"), 404
+    return jsonify(ok=True)
+
+
+@app.route("/api/discover/export")
+def api_discover_export():
+    entries = discovery_store.list_entries()
+    if not entries:
+        return jsonify(error="Discovery log is empty"), 400
+    csv_text = discovery_store.build_discovery_log_csv(entries)
+    return Response(
+        csv_text,
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=discovery_log.csv"},
     )
 
 
