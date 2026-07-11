@@ -26,6 +26,15 @@ def test_parses_csv_with_header():
     ]
 
 
+def test_parses_csv_with_alternate_header_names():
+    text = 'Song Title,Artist Name\n"One More Time","Daft Punk"\n"Porcelain","Moby"'
+    tracks = parse_input_text(text)
+    assert [(t.artist, t.title) for t in tracks] == [
+        ("Daft Punk", "One More Time"),
+        ("Moby", "Porcelain"),
+    ]
+
+
 def test_parses_headerless_csv_as_artist_title():
     text = "Daft Punk,One More Time\nMoby,Porcelain"
     tracks = parse_input_text(text)

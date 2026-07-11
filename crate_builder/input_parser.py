@@ -7,8 +7,24 @@ import io
 import re
 from dataclasses import dataclass
 
-TITLE_HEADER_ALIASES = {"title", "track", "track name", "song", "song name", "name"}
-ARTIST_HEADER_ALIASES = {"artist", "artist name(s)", "artist(s)", "artists", "performer"}
+TITLE_HEADER_ALIASES = {
+    "title",
+    "track",
+    "track name",
+    "track title",
+    "song",
+    "song name",
+    "song title",
+    "name",
+}
+ARTIST_HEADER_ALIASES = {
+    "artist",
+    "artist name",
+    "artist name(s)",
+    "artist(s)",
+    "artists",
+    "performer",
+}
 
 # "Artist - Title", "Artist – Title" (en dash), "Artist — Title" (em dash)
 _LINE_SPLIT_PATTERN = re.compile(r"\s+[-–—]\s+")
