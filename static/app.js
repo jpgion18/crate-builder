@@ -278,3 +278,33 @@ async function downloadMissingLog() {
 }
 
 $("missing_log_btn").addEventListener("click", downloadMissingLog);
+
+$("sync_showfile_btn").addEventListener("click", async () => {
+  const event_code = $("showfile_code").value.trim();
+
+  const checkboxes = document.querySelectorAll('#results_table input[type="checkbox"]');
+  const tracks = [];
+  checkboxes.forEach((cb) => {
+    if (cb.checked) {
+      const m = lastMatches[Number(cb.dataset.index)];
+      if (m.track) tracks.push({ artist: m.track.artist, title: m.track.title });
+    }
+  });
+
+  if (!event_code) {
+    setStatus($("sync_showfile_status"), "Enter a Showfile event code first.", true);
+    return;
+  }
+  if (tracks.length === 0) {
+    setStatus($("sync_showfile_status"), "No matched tracks selected.", true);
+    return;
+  }
+
+  setStatus($("sync_showfile_status"), "Syncing...");
+  try {
+    const data = await postJSON("/api/sync_showfile", { event_code, tracks });
+    setStatus($("sync_showfile_status"), `Synced ${data.count} tracks to Showfile.`);
+  } catch (err) {
+    setStatus($("sync_showfile_status"), err.message, true);
+  }
+});

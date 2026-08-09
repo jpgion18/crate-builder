@@ -9,6 +9,7 @@ Then open http://127.0.0.1:5001 in your browser.
 from __future__ import annotations
 
 import os
+import sys
 
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, redirect, request, render_template
@@ -18,6 +19,7 @@ from crate_builder.input_parser import parse_input_text
 from crate_builder.library import scan_library
 from crate_builder.matcher import DEFAULT_THRESHOLD, match_tracks, normalize
 from crate_builder.missing_log import build_missing_log_csv
+from crate_builder.showfile_client import ShowfileNotConfigured, ShowfileSyncError, sync_playlist
 from crate_builder.spotify_client import (
     SpotifyNotConfigured,
     SpotifyNotConnected,
@@ -31,7 +33,15 @@ from spotipy.exceptions import SpotifyException
 
 load_dotenv()
 
-app = Flask(__name__)
+# When packaged with PyInstaller, templates/static ship as extracted data
+# files under sys._MEIPASS rather than next to this source file.
+_BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(_BASE_DIR, "templates"),
+    static_folder=os.path.join(_BASE_DIR, "static"),
+)
 
 # Single-user local tool: an in-memory cache keyed by library directory is
 # enough to avoid re-scanning the whole library on every request.
@@ -81,6 +91,7 @@ def index():
         default_library_dir=serato_paths.guess_music_dir(),
         default_serato_dir=serato_paths.guess_serato_dir(),
         default_threshold=DEFAULT_THRESHOLD,
+        showfile_configured=bool(os.environ.get("SHOWFILE_API_URL") and os.environ.get("SHOWFILE_API_KEY")),
     )
 
 
@@ -350,6 +361,27 @@ def api_discover_export():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=discovery_log.csv"},
     )
+
+
+@app.route("/api/sync_showfile", methods=["POST"])
+def api_sync_showfile():
+    data = request.get_json(force=True)
+    event_code = data.get("event_code", "").strip()
+    tracks = data.get("tracks", [])
+
+    if not event_code:
+        return jsonify(error="Showfile event code is required"), 400
+    if not tracks:
+        return jsonify(error="No matched tracks to sync"), 400
+
+    try:
+        result = sync_playlist(event_code, tracks)
+    except ShowfileNotConfigured as exc:
+        return jsonify(error=str(exc)), 400
+    except ShowfileSyncError as exc:
+        return jsonify(error=str(exc)), exc.status_code or 502
+
+    return jsonify(count=result.get("count", len(tracks)))
 
 
 if __name__ == "__main__":

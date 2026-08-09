@@ -44,6 +44,39 @@ This is paste-based rather than a live crawler — sites like
 would be a ToS/legal gray area, so you bring the tracklist and this tool
 does the cross-referencing.
 
+## Desktop app (recommended for most users)
+
+Most people don't need to touch Python or a terminal at all: download the
+prebuilt app for your OS from the
+[latest release](https://github.com/jpgion18/crate-builder/releases) —
+`CrateBuilder.app` (macOS) or `CrateBuilder.exe` (Windows) — and double-click
+it. It opens as a normal desktop window; there's no browser tab, no
+`localhost` URL, nothing to run separately.
+
+These builds are unsigned (no Apple Developer / Windows code-signing
+certificate), so the OS will warn you the first time you open one:
+- **macOS**: right-click the app → **Open** → **Open** (instead of
+  double-clicking) to bypass Gatekeeper.
+- **Windows**: click **More info** → **Run anyway** on the SmartScreen prompt.
+
+The sections below (Setup, Running it) are for running from source instead —
+useful for development, or if you'd rather build/run it yourself.
+
+### Building the desktop app yourself
+
+A GitHub Actions workflow (`.github/workflows/build-desktop.yml`) builds
+macOS and Windows binaries via PyInstaller. Push a `v*` tag, or trigger it
+manually from the Actions tab, then download the artifacts from that run. To
+build locally instead:
+
+```bash
+pip install -r requirements-desktop.txt
+pyinstaller desktop_app.spec
+```
+
+The build lands in `dist/CrateBuilder.app` (macOS) or `dist/CrateBuilder/`
+(Windows/Linux).
+
 ## Setup
 
 ```bash
@@ -74,7 +107,28 @@ they don't own — even public ones. Logging in lets it read any playlist you
 can see in the Spotify app. Your login token is cached locally in
 `.spotify_token_cache` (gitignored) so you won't need to log in every run.
 
+### Optional: Showfile playlist sync
+
+If you use [Showfile](https://github.com/jpgion18/showfile) to manage DJ
+gigs, crate-builder can push a matched playlist straight to an event's
+timeline so the couple sees song suggestions there. Set it up:
+
+```bash
+cp .env.example .env
+# edit .env and fill in SHOWFILE_API_URL / SHOWFILE_API_KEY
+```
+
+Get your API key from the Showfile dashboard's "Playlist sync
+(crate-builder)" panel. After previewing and selecting matches below, enter
+the event's code (e.g. `KATIE-DREW-1004`) in the **Sync to Showfile** field
+and click the button — it sends the selected, matched tracks' artist/title
+to Showfile, replacing that event's synced playlist each time. This is
+additive to building a Serato crate, not a replacement for it; you can do
+either, both, or neither per session.
+
 ## Running it
+
+If you'd rather not use the packaged desktop app above, run from source:
 
 **Easiest: double-click `start.command`** in Finder (after the one-time
 setup above). It activates the virtual environment, starts the server, and
@@ -82,7 +136,7 @@ opens your browser automatically — no Terminal typing needed. If macOS
 warns about an unidentified developer the first time, right-click
 `start.command` → **Open** instead of double-clicking, and confirm once.
 
-Or manually:
+Or as a local web app (browser), manually:
 
 ```bash
 python app.py
@@ -94,6 +148,15 @@ Open http://127.0.0.1:5001 in your browser.
 return a confusing 403 if you try to use it. If you'd rather free up 5000
 instead, turn off AirPlay Receiver in System Settings → General → AirDrop &
 Handoff.)
+
+Or as a native window, without building the packaged app:
+
+```bash
+pip install -r requirements-desktop.txt
+python desktop_app.py
+```
+
+Either way, the workflow is the same:
 
 1. Set your **music library folder** (defaults to `~/Music`) and click
    **Scan Library**.

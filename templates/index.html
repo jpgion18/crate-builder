@@ -79,6 +79,13 @@
       <button id="build_btn" type="button">Build Crate</button>
       <button id="missing_log_btn" type="button">Download Missing Tracks Log</button>
       <span id="build_status" class="status"></span>
+
+      <div class="field showfile_field">
+        <label for="showfile_code">Showfile event code (optional)</label>
+        <input id="showfile_code" type="text" placeholder="e.g. KATIE-DREW-1004" />
+        <button id="sync_showfile_btn" type="button">Sync to Showfile</button>
+        <span id="sync_showfile_status" class="status">{% if not showfile_configured %}Set SHOWFILE_API_URL / SHOWFILE_API_KEY in .env to enable.{% endif %}</span>
+      </div>
     </section>
   </main>
 
