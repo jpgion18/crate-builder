@@ -74,6 +74,25 @@ they don't own — even public ones. Logging in lets it read any playlist you
 can see in the Spotify app. Your login token is cached locally in
 `.spotify_token_cache` (gitignored) so you won't need to log in every run.
 
+### Optional: Showfile playlist sync
+
+If you use [Showfile](https://github.com/jpgion18/showfile) to manage DJ
+gigs, crate-builder can push a matched playlist straight to an event's
+timeline so the couple sees song suggestions there. Set it up:
+
+```bash
+cp .env.example .env
+# edit .env and fill in SHOWFILE_API_URL / SHOWFILE_API_KEY
+```
+
+Get your API key from the Showfile dashboard's "Playlist sync
+(crate-builder)" panel. After previewing and selecting matches below, enter
+the event's code (e.g. `KATIE-DREW-1004`) in the **Sync to Showfile** field
+and click the button — it sends the selected, matched tracks' artist/title
+to Showfile, replacing that event's synced playlist each time. This is
+additive to building a Serato crate, not a replacement for it; you can do
+either, both, or neither per session.
+
 ## Running it
 
 **Easiest: double-click `start.command`** in Finder (after the one-time
