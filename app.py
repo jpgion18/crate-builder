@@ -9,6 +9,7 @@ Then open http://127.0.0.1:5001 in your browser.
 from __future__ import annotations
 
 import os
+import sys
 
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, redirect, request, render_template
@@ -32,7 +33,15 @@ from spotipy.exceptions import SpotifyException
 
 load_dotenv()
 
-app = Flask(__name__)
+# When packaged with PyInstaller, templates/static ship as extracted data
+# files under sys._MEIPASS rather than next to this source file.
+_BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(_BASE_DIR, "templates"),
+    static_folder=os.path.join(_BASE_DIR, "static"),
+)
 
 # Single-user local tool: an in-memory cache keyed by library directory is
 # enough to avoid re-scanning the whole library on every request.

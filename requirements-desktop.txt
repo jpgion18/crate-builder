@@ -1,0 +1,5 @@
+# Everything needed to run/build the native desktop app (desktop_app.py),
+# on top of the base web-app requirements.
+-r requirements.txt
+pywebview==5.3.2
+pyinstaller==6.10.0

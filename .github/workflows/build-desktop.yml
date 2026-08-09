@@ -1,0 +1,41 @@
+name: Build desktop app
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact_name: CrateBuilder-macos
+            build_path: dist/CrateBuilder.app
+          - os: windows-latest
+            artifact_name: CrateBuilder-windows
+            build_path: dist/CrateBuilder
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements-desktop.txt
+
+      - name: Build with PyInstaller
+        run: pyinstaller desktop_app.spec
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.build_path }}
