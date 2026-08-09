@@ -65,9 +65,17 @@ useful for development, or if you'd rather build/run it yourself.
 ### Building the desktop app yourself
 
 A GitHub Actions workflow (`.github/workflows/build-desktop.yml`) builds
-macOS and Windows binaries via PyInstaller. Push a `v*` tag, or trigger it
-manually from the Actions tab, then download the artifacts from that run. To
-build locally instead:
+macOS and Windows binaries via PyInstaller.
+
+- **Push a `v*` tag** (e.g. `v0.1.0`) to publish a proper
+  [Release](https://github.com/jpgion18/crate-builder/releases) with
+  `CrateBuilder-macos.zip` / `CrateBuilder-windows.zip` attached — this is
+  what the download link above points to.
+- **Trigger it manually** from the Actions tab to just build and sanity-check
+  without publishing a release; grab the zips from that run's artifacts
+  instead (these expire after 90 days).
+
+To build locally instead:
 
 ```bash
 pip install -r requirements-desktop.txt
