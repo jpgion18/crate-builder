@@ -134,6 +134,27 @@ to Showfile, replacing that event's synced playlist each time. This is
 additive to building a Serato crate, not a replacement for it; you can do
 either, both, or neither per session.
 
+### Optional: Community crate sharing
+
+[Crate Builder Community](https://github.com/jpgion18/crate-builder-community)
+is a separate, small, anonymous web app where DJs can publish and browse
+crate track lists — for sharing and education, not audio. Only artist/title
+metadata ever leaves your machine: no audio files, no local file paths, no
+library contents beyond what you explicitly publish. Set it up:
+
+```bash
+cp .env.example .env
+# edit .env and fill in COMMUNITY_API_URL with your deployment's URL
+```
+
+The **Community** tab lets you browse and search what others have
+published, and copy a track list to paste into the matcher above. To
+publish your own: check **"Also publish this crate to the Community
+feed"** before clicking Build Crate, optionally add a tag and a display
+name (no account — it's a free-text name, not an identity), and the
+selected/matched tracks get published alongside the local crate build.
+Nothing is published unless that checkbox is checked.
+
 ## Running it
 
 If you'd rather not use the packaged desktop app above, run from source:

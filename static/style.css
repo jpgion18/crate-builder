@@ -80,6 +80,12 @@ h1 { margin-bottom: 0.25rem; }
   color: var(--text);
 }
 
+.field input[type="text"].narrow {
+  flex: none;
+  min-width: 160px;
+  width: 220px;
+}
+
 textarea {
   width: 100%;
   padding: 0.6rem;
@@ -166,3 +172,54 @@ tr.unmatched td { color: var(--muted); }
 }
 
 .manual-result:hover { background: #1f2430; }
+
+.crate {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.crate-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  cursor: pointer;
+  gap: 1rem;
+}
+
+.crate-title { font-weight: 600; }
+
+.crate-meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.crate-tag {
+  display: inline-block;
+  background: #1f2430;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.8rem;
+  margin-right: 0.5rem;
+}
+
+.crate-tracks {
+  margin-top: 0.75rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  background: #0f1115;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.6rem;
+}
+
+.load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}

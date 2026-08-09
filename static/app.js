@@ -195,18 +195,37 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-async function buildCrate(overwrite = false) {
-  const serato_dir = $("serato_dir").value.trim();
-  const crate_name = $("crate_name").value.trim();
-
+function selectedMatchedTracks() {
   const checkboxes = document.querySelectorAll('#results_table input[type="checkbox"]');
-  const track_paths = [];
+  const tracks = [];
   checkboxes.forEach((cb) => {
     if (cb.checked) {
       const m = lastMatches[Number(cb.dataset.index)];
-      if (m.track) track_paths.push(m.track.path);
+      if (m.track) tracks.push(m.track);
     }
   });
+  return tracks;
+}
+
+async function publishToCommunity(crate_name, selected) {
+  const tag = $("community_tag").value.trim();
+  const display_name = $("community_display_name").value.trim();
+  const tracks = selected.map((t) => ({ artist: t.artist, title: t.title }));
+
+  setStatus($("community_status"), "Publishing...");
+  try {
+    await postJSON("/api/publish_crate", { crate_name, tracks, tag, display_name });
+    setStatus($("community_status"), "Published to the Community feed.");
+  } catch (err) {
+    setStatus($("community_status"), err.message, true);
+  }
+}
+
+async function buildCrate(overwrite = false) {
+  const serato_dir = $("serato_dir").value.trim();
+  const crate_name = $("crate_name").value.trim();
+  const selected = selectedMatchedTracks();
+  const track_paths = selected.map((t) => t.path);
 
   if (!crate_name) {
     setStatus($("build_status"), "Enter a crate name first.", true);
@@ -221,6 +240,9 @@ async function buildCrate(overwrite = false) {
   try {
     const data = await postJSON("/api/build", { serato_dir, crate_name, track_paths, overwrite });
     setStatus($("build_status"), `Crate written: ${data.path} (${data.track_count} tracks). Restart Serato (or rescan) to see it.`);
+    if ($("community_publish").checked) {
+      await publishToCommunity(crate_name, selected);
+    }
   } catch (err) {
     if (err.message === "exists") {
       if (confirm("A crate with that name already exists. Overwrite it?")) {
@@ -281,15 +303,7 @@ $("missing_log_btn").addEventListener("click", downloadMissingLog);
 
 $("sync_showfile_btn").addEventListener("click", async () => {
   const event_code = $("showfile_code").value.trim();
-
-  const checkboxes = document.querySelectorAll('#results_table input[type="checkbox"]');
-  const tracks = [];
-  checkboxes.forEach((cb) => {
-    if (cb.checked) {
-      const m = lastMatches[Number(cb.dataset.index)];
-      if (m.track) tracks.push({ artist: m.track.artist, title: m.track.title });
-    }
-  });
+  const tracks = selectedMatchedTracks().map((t) => ({ artist: t.artist, title: t.title }));
 
   if (!event_code) {
     setStatus($("sync_showfile_status"), "Enter a Showfile event code first.", true);
