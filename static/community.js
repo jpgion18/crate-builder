@@ -22,6 +22,40 @@ function trackListText(tracks) {
   return tracks.map((t) => (t.artist ? `${t.artist} - ${t.title}` : t.title)).join("\n");
 }
 
+function showCodeEntry(message, isError = false) {
+  $("code_panel").classList.remove("hidden");
+  $("search_panel").classList.add("hidden");
+  if (message) setStatus($("code_status"), message, isError);
+}
+
+function showBrowse() {
+  $("code_panel").classList.add("hidden");
+  $("search_panel").classList.remove("hidden");
+}
+
+async function saveCode() {
+  const code = $("access_code_input").value.trim();
+  if (!code) {
+    setStatus($("code_status"), "Enter your access code first.", true);
+    return;
+  }
+  setStatus($("code_status"), "Saving...");
+  try {
+    const res = await fetch("/api/community/code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Request failed");
+    $("access_code_input").value = "";
+    showBrowse();
+    load(0, "", false);
+  } catch (err) {
+    setStatus($("code_status"), err.message, true);
+  }
+}
+
 async function load(nextOffset, query, append) {
   setStatus($("list_status"), "Loading...");
   try {
@@ -29,6 +63,11 @@ async function load(nextOffset, query, append) {
     if (query) params.set("q", query);
     const res = await fetch(`/api/community/list?${params}`);
     const data = await res.json();
+
+    if (res.status === 401) {
+      showCodeEntry(data.error || "Invalid access code — enter a new one.", true);
+      return;
+    }
     if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
 
     crates = append ? crates.concat(data.crates) : data.crates;
@@ -85,10 +124,26 @@ function render() {
   $("load_more_btn").classList.toggle("hidden", crates.length >= total);
 }
 
+$("save_code_btn").addEventListener("click", saveCode);
+$("access_code_input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") saveCode();
+});
+$("change_code_btn").addEventListener("click", () => showCodeEntry(""));
 $("search_btn").addEventListener("click", () => load(0, $("search_input").value.trim(), false));
 $("search_input").addEventListener("keydown", (e) => {
   if (e.key === "Enter") load(0, $("search_input").value.trim(), false);
 });
 $("load_more_btn").addEventListener("click", () => load(offset + PAGE_SIZE, currentQuery, true));
 
-load(0, "", false);
+async function init() {
+  const res = await fetch("/api/community/code");
+  const data = await res.json();
+  if (data.has_code) {
+    showBrowse();
+    load(0, "", false);
+  } else {
+    showCodeEntry("");
+  }
+}
+
+init();

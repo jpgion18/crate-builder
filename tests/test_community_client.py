@@ -5,15 +5,39 @@ import pytest
 from crate_builder import community_client
 
 
+@pytest.fixture(autouse=True)
+def community_code_path(tmp_path, monkeypatch):
+    """Redirect the access-code file to a temp path so tests don't touch ~/.crate_builder/."""
+    monkeypatch.setattr(community_client, "_CODE_PATH", str(tmp_path / "community_access_code"))
+
+
+def test_get_access_code_returns_empty_when_unset():
+    assert community_client.get_access_code() == ""
+
+
+def test_set_and_get_access_code_round_trip():
+    community_client.set_access_code("  my-code  ")
+    assert community_client.get_access_code() == "my-code"
+
+
 def test_publish_crate_raises_when_not_configured(monkeypatch):
     monkeypatch.delenv("COMMUNITY_API_URL", raising=False)
+    community_client.set_access_code("my-code")
 
     with pytest.raises(community_client.CommunityNotConfigured):
         community_client.publish_crate("My Crate", [{"artist": "A", "title": "B"}])
 
 
+def test_publish_crate_raises_when_no_access_code(monkeypatch):
+    monkeypatch.setenv("COMMUNITY_API_URL", "https://community.example.com")
+
+    with pytest.raises(community_client.CommunityAccessCodeMissing):
+        community_client.publish_crate("My Crate", [{"artist": "A", "title": "B"}])
+
+
 def test_publish_crate_posts_expected_request(monkeypatch):
     monkeypatch.setenv("COMMUNITY_API_URL", "https://community.example.com")
+    community_client.set_access_code("my-code")
 
     mock_response = Mock(ok=True)
     mock_response.json.return_value = {"ok": True, "id": "abc-123"}
@@ -27,12 +51,14 @@ def test_publish_crate_posts_expected_request(monkeypatch):
         "POST",
         "https://community.example.com/api/crates",
         timeout=10,
+        headers={"Authorization": "Bearer my-code"},
         json={"crate_name": "My Crate", "tracks": tracks, "tag": "techno", "display_name": "DJ Test"},
     )
 
 
 def test_publish_crate_raises_on_error_response(monkeypatch):
     monkeypatch.setenv("COMMUNITY_API_URL", "https://community.example.com")
+    community_client.set_access_code("my-code")
 
     mock_response = Mock(ok=False, status_code=429)
     mock_response.json.return_value = {"error": "Too many requests"}
@@ -47,6 +73,7 @@ def test_publish_crate_raises_on_error_response(monkeypatch):
 
 def test_list_crates_builds_query_params(monkeypatch):
     monkeypatch.setenv("COMMUNITY_API_URL", "https://community.example.com")
+    community_client.set_access_code("my-code")
 
     mock_response = Mock(ok=True)
     mock_response.json.return_value = {"crates": [], "total": 0}
@@ -59,5 +86,6 @@ def test_list_crates_builds_query_params(monkeypatch):
         "GET",
         "https://community.example.com/api/crates",
         timeout=10,
+        headers={"Authorization": "Bearer my-code"},
         params={"limit": 10, "offset": 20, "q": "techno"},
     )

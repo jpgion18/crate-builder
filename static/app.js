@@ -37,6 +37,22 @@ $("spotify_connect_btn").addEventListener("click", () => {
 
 refreshSpotifyStatus();
 
+async function refreshCommunityStatus() {
+  const el = $("community_status");
+  if (el.dataset.communityConfigured !== "true") return; // COMMUNITY_API_URL isn't set; keep that message.
+  try {
+    const res = await fetch("/api/community/code");
+    const data = await res.json();
+    if (!data.has_code) {
+      setStatus(el, "Get your access code from the Community tab (Showfile Settings) to enable publishing.");
+    }
+  } catch (err) {
+    // Best-effort; ignore failures here.
+  }
+}
+
+refreshCommunityStatus();
+
 async function postJSON(url, body) {
   const res = await fetch(url, {
     method: "POST",

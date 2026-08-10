@@ -137,23 +137,28 @@ either, both, or neither per session.
 ### Optional: Community crate sharing
 
 [Crate Builder Community](https://github.com/jpgion18/crate-builder-community)
-is a separate, small, anonymous web app where DJs can publish and browse
-crate track lists — for sharing and education, not audio. Only artist/title
-metadata ever leaves your machine: no audio files, no local file paths, no
-library contents beyond what you explicitly publish. Set it up:
+is a free perk for DJs with an active [Showfile](https://github.com/jpgion18/showfile)
+subscription: publish and browse crate track lists — for sharing and
+education, not audio. Only artist/title metadata ever leaves your machine:
+no audio files, no local file paths, no library contents beyond what you
+explicitly publish. crate-builder itself stays free either way; this only
+gates the shared community feed, not the tool.
 
 ```bash
 cp .env.example .env
-# edit .env and fill in COMMUNITY_API_URL with your deployment's URL
+# COMMUNITY_API_URL already defaults to https://crate.showfile.events
 ```
 
-The **Community** tab lets you browse and search what others have
+Then open the **Community** tab and paste your access code — get it from
+your Showfile dashboard's Settings page (Crate Builder Community panel).
+It's saved locally, not in `.env`, so you only need to do this once. Once
+set, the Community tab lets you browse and search what others have
 published, and copy a track list to paste into the matcher above. To
 publish your own: check **"Also publish this crate to the Community
 feed"** before clicking Build Crate, optionally add a tag and a display
-name (no account — it's a free-text name, not an identity), and the
-selected/matched tracks get published alongside the local crate build.
-Nothing is published unless that checkbox is checked.
+name (not tied to your Showfile business name), and the selected/matched
+tracks get published alongside the local crate build. Nothing is
+published unless that checkbox is checked.
 
 ## Running it
 
