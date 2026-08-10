@@ -338,3 +338,15 @@ $("sync_showfile_btn").addEventListener("click", async () => {
     setStatus($("sync_showfile_status"), err.message, true);
   }
 });
+
+// MyEvents/Discover/Community are just sources — they hand off a tracklist
+// (and optionally which Showfile event it belongs to) here rather than
+// each having their own matching UI.
+const handoff = consumeCrateBuilderHandoff();
+if (handoff && handoff.input_text) {
+  $("input_text").value = handoff.input_text;
+  if (handoff.showfile_event_code) {
+    $("showfile_code").value = handoff.showfile_event_code;
+  }
+  $("preview_btn").click();
+}

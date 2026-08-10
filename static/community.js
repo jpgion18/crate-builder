@@ -89,10 +89,19 @@ function render() {
 
       const copyBtn = document.createElement("button");
       copyBtn.type = "button";
+      copyBtn.className = "secondary";
       copyBtn.textContent = "Copy track list";
       copyBtn.style.marginTop = "0.6rem";
       copyBtn.addEventListener("click", () => navigator.clipboard.writeText(trackListText(crate.tracks)));
       div.appendChild(copyBtn);
+
+      const sendBtn = document.createElement("button");
+      sendBtn.type = "button";
+      sendBtn.textContent = "Send to Crate Builder";
+      sendBtn.style.marginTop = "0.6rem";
+      sendBtn.style.marginLeft = "0.5rem";
+      sendBtn.addEventListener("click", () => sendToCrateBuilder(trackListText(crate.tracks)));
+      div.appendChild(sendBtn);
     }
 
     panel.appendChild(div);

@@ -16,7 +16,7 @@ from urllib.parse import urlencode
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, redirect, request, render_template
 
-from crate_builder import discovery_store, local_config, serato_crate, serato_paths
+from crate_builder import discovery_store, local_config, pending_store, serato_crate, serato_paths
 from crate_builder.community_client import (
     CommunityAccessCodeMissing,
     CommunityNotConfigured,
@@ -28,6 +28,7 @@ from crate_builder.input_parser import parse_input_text
 from crate_builder.library import scan_library
 from crate_builder.matcher import DEFAULT_THRESHOLD, match_tracks, normalize
 from crate_builder.missing_log import build_missing_log_csv
+from crate_builder.myevents_poller import ShowfilePendingError, poll_once, start_background_polling
 from crate_builder.showfile_auth import ShowfileAuthError, exchange_code, resolved_base_url, start_login
 from crate_builder.showfile_client import ShowfileNotConfigured, ShowfileSyncError, sync_playlist
 from crate_builder.spotify_client import (
@@ -136,6 +137,11 @@ def discover_page():
 @app.route("/community")
 def community_page():
     return render_template("community.html")
+
+
+@app.route("/myevents")
+def myevents_page():
+    return render_template("myevents.html")
 
 
 @app.route("/settings")
@@ -543,7 +549,31 @@ def api_settings_post():
     return jsonify(**settings)
 
 
+@app.route("/api/myevents", methods=["GET"])
+def api_myevents():
+    """Serves the local cache from the last poll — never calls Showfile
+    itself, so loading this page has no rate-limit cost."""
+    return jsonify(events=pending_store.get_cached_events())
+
+
+@app.route("/api/myevents/refresh", methods=["POST"])
+def api_myevents_refresh():
+    try:
+        events = poll_once()
+    except ShowfilePendingError as exc:
+        return jsonify(error=str(exc)), 502
+    return jsonify(events=events)
+
+
 if __name__ == "__main__":
+    # debug=True below runs under Werkzeug's reloader, which re-execs this
+    # script in a child process (setting WERKZEUG_RUN_MAIN=true there) and
+    # keeps the original as a file-watching monitor that never serves.
+    # Since this whole __main__ block reruns in both, only start polling
+    # in the child that's actually going to serve — otherwise two
+    # processes would each run their own polling loop.
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        start_background_polling()
     # Port 5000 is reserved by macOS AirPlay Receiver and will silently
     # 403 requests before they reach Flask, so default to 5001 instead.
     app.run(debug=True, port=5001)

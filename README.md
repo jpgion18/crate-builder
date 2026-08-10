@@ -145,6 +145,22 @@ either way — Settings only gates these two Showfile-connected extras.
 `COMMUNITY_API_URL`) if you'd rather not use the Settings page, but
 whatever's saved in Settings takes priority.
 
+### MyEvents tab (automated Playlist Sync, once connected)
+
+Once Showfile's connected, crate-builder polls it every few minutes for
+songs your couples have entered on their timelines — no manual
+paste/export needed. **MyEvents** shows one tile per event with songs
+waiting, each with a count of what's new since the last check and a
+**"Match this event's songs"** button.
+
+There's really only one "Crate Builder" in this app — the match/review
+table, Build Crate, Sync to Showfile, and Publish to Community on the main
+page. MyEvents, Discover, and Community are all just *sources* that feed
+it: MyEvents' "Match this event's songs," Discover's "Build a Crate from
+this," and Community's "Send to Crate Builder" all land you on the main
+page with that source's tracklist already pasted in and matched, ready to
+review — nothing about matching or building is duplicated per-tab.
+
 ## Running it
 
 If you'd rather not use the packaged desktop app above, run from source:
