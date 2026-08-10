@@ -16,7 +16,13 @@ import os
 
 _CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".crate_builder", "config.json")
 
-_KEYS = ("showfile_url", "showfile_api_key", "community_url", "community_access_code")
+_KEYS = (
+    "showfile_url",
+    "showfile_api_key",
+    "showfile_business_name",
+    "community_url",
+    "community_access_code",
+)
 
 
 def _read() -> dict:

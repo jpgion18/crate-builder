@@ -8,6 +8,7 @@ def test_get_settings_defaults_to_empty_strings():
     assert settings == {
         "showfile_url": "",
         "showfile_api_key": "",
+        "showfile_business_name": "",
         "community_url": "",
         "community_access_code": "",
     }

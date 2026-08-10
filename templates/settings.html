@@ -26,36 +26,54 @@
 
     <section class="panel">
       <h2>Connect Showfile</h2>
-      <p class="subtitle">
-        Find these on your Showfile dashboard's Settings page, in the
-        "Playlist Sync (crate-builder)" and "Crate Builder Community"
-        panels.
-      </p>
 
-      <div class="field">
-        <label for="showfile_url">Showfile site URL</label>
-        <input id="showfile_url" type="text" placeholder="https://www.showfile.events" />
+      <div id="connected_view" class="field hidden">
+        <label>Status</label>
+        <span id="connected_label"></span>
+        <button id="reconnect_btn" type="button" class="secondary">Reconnect</button>
+        <button id="disconnect_btn" type="button" class="secondary">Disconnect</button>
       </div>
 
-      <div class="field">
-        <label for="showfile_api_key">Playlist Sync API key</label>
-        <input id="showfile_api_key" type="password" placeholder="Paste your API key" />
-        <button type="button" class="secondary" data-toggle-for="showfile_api_key">Show</button>
+      <div id="login_view" class="field hidden">
+        <label>Status</label>
+        <a href="/showfile/login"><button type="button">Log in with Showfile</button></a>
       </div>
 
-      <div class="field">
-        <label for="community_access_code">Community access code</label>
-        <input id="community_access_code" type="password" placeholder="Paste your access code" />
-        <button type="button" class="secondary" data-toggle-for="community_access_code">Show</button>
-      </div>
+      <span id="login_status" class="status"></span>
 
-      <div class="field">
-        <label for="community_url">Community feed URL</label>
-        <input id="community_url" type="text" placeholder="https://crate.showfile.events" />
-      </div>
+      <details style="margin-top: 1rem;">
+        <summary>Or enter your Showfile credentials manually</summary>
+        <p class="subtitle">
+          Find these on your Showfile dashboard's Settings page, in the
+          "Playlist Sync (crate-builder)" and "Crate Builder Community"
+          panels.
+        </p>
 
-      <button id="save_btn" type="button">Save</button>
-      <span id="save_status" class="status"></span>
+        <div class="field">
+          <label for="showfile_url">Showfile site URL</label>
+          <input id="showfile_url" type="text" placeholder="https://www.showfile.events" />
+        </div>
+
+        <div class="field">
+          <label for="showfile_api_key">Playlist Sync API key</label>
+          <input id="showfile_api_key" type="password" placeholder="Paste your API key" />
+          <button type="button" class="secondary" data-toggle-for="showfile_api_key">Show</button>
+        </div>
+
+        <div class="field">
+          <label for="community_access_code">Community access code</label>
+          <input id="community_access_code" type="password" placeholder="Paste your access code" />
+          <button type="button" class="secondary" data-toggle-for="community_access_code">Show</button>
+        </div>
+
+        <div class="field">
+          <label for="community_url">Community feed URL</label>
+          <input id="community_url" type="text" placeholder="https://crate.showfile.events" />
+        </div>
+
+        <button id="save_btn" type="button">Save</button>
+        <span id="save_status" class="status"></span>
+      </details>
     </section>
   </main>
 

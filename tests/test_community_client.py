@@ -85,6 +85,34 @@ def test_list_crates_builds_query_params(monkeypatch):
     )
 
 
+def test_list_crates_clears_stored_code_on_401(monkeypatch):
+    monkeypatch.setenv("COMMUNITY_API_URL", "https://community.example.com")
+    community_client.set_access_code("stale-code")
+
+    mock_response = Mock(ok=False, status_code=401)
+    mock_response.json.return_value = {"error": "Invalid access code"}
+
+    with patch("crate_builder.community_client.requests.request", return_value=mock_response):
+        with pytest.raises(community_client.CommunityRequestError):
+            community_client.list_crates()
+
+    assert community_client.get_access_code() == ""
+
+
+def test_list_crates_keeps_stored_code_on_403():
+    community_client.set_access_code("valid-but-unentitled-code")
+    local_config.update_settings(community_url="https://community.example.com")
+
+    mock_response = Mock(ok=False, status_code=403)
+    mock_response.json.return_value = {"error": "Your Showfile subscription isn't active"}
+
+    with patch("crate_builder.community_client.requests.request", return_value=mock_response):
+        with pytest.raises(community_client.CommunityRequestError):
+            community_client.list_crates()
+
+    assert community_client.get_access_code() == "valid-but-unentitled-code"
+
+
 def test_url_and_code_prefer_local_config_over_env(monkeypatch):
     monkeypatch.setenv("COMMUNITY_API_URL", "https://env.example.com")
     local_config.update_settings(community_url="https://settings.example.com", community_access_code="settings-code")
