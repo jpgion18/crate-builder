@@ -97,7 +97,7 @@
         <label for="community_display_name">Display name (optional)</label>
         <input id="community_display_name" type="text" class="narrow" placeholder="Anonymous" />
       </div>
-      <span id="community_status" class="status">{% if not community_configured %}Set COMMUNITY_API_URL in .env to enable.{% endif %}</span>
+      <span id="community_status" class="status" data-community-configured="{{ community_configured|lower }}">{% if not community_configured %}Set COMMUNITY_API_URL in .env to enable.{% endif %}</span>
     </section>
   </main>
 

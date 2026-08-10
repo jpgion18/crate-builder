@@ -15,19 +15,30 @@
     </nav>
     <h1>Community</h1>
     <p class="subtitle">
-      Crates other DJs have published — anonymous, metadata only (no audio,
-      no file paths). Copy a track list and paste it into the main
+      A free perk for DJs with an active Showfile subscription: crates other
+      DJs have published — anonymous, metadata only (no audio, no file
+      paths). Copy a track list and paste it into the main
       <a href="/" style="color: inherit;">Crate Builder</a> tab to check it
       against your own library. Build a crate there with "Also publish this
       crate to the Community feed" checked to share your own.
     </p>
 
-    <section class="panel">
+    <section class="panel" id="code_panel">
+      <div class="field">
+        <label for="access_code_input">Showfile access code</label>
+        <input id="access_code_input" type="text" placeholder="Paste your access code from Showfile Settings" />
+        <button id="save_code_btn" type="button">Save</button>
+      </div>
+      <span id="code_status" class="status"></span>
+    </section>
+
+    <section class="panel hidden" id="search_panel">
       <div class="field">
         <label for="search_input">Search by crate name or tag</label>
         <input id="search_input" type="text" placeholder="e.g. techno, wedding, open format" />
         <button id="search_btn" type="button">Search</button>
       </div>
+      <button id="change_code_btn" type="button">Change access code</button>
       <span id="list_status" class="status"></span>
     </section>
 

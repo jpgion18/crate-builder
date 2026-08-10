@@ -16,10 +16,13 @@ from flask import Flask, Response, jsonify, redirect, request, render_template
 
 from crate_builder import discovery_store, serato_crate, serato_paths
 from crate_builder.community_client import (
+    CommunityAccessCodeMissing,
     CommunityNotConfigured,
     CommunityRequestError,
+    get_access_code,
     list_crates,
     publish_crate,
+    set_access_code,
 )
 from crate_builder.input_parser import parse_input_text
 from crate_builder.library import scan_library
@@ -411,7 +414,7 @@ def api_publish_crate():
 
     try:
         result = publish_crate(crate_name, tracks, tag=tag, display_name=display_name)
-    except CommunityNotConfigured as exc:
+    except (CommunityNotConfigured, CommunityAccessCodeMissing) as exc:
         return jsonify(error=str(exc)), 400
     except CommunityRequestError as exc:
         return jsonify(error=str(exc)), exc.status_code or 502
@@ -427,12 +430,27 @@ def api_community_list():
 
     try:
         result = list_crates(query=query, limit=limit, offset=offset)
-    except CommunityNotConfigured as exc:
+    except (CommunityNotConfigured, CommunityAccessCodeMissing) as exc:
         return jsonify(error=str(exc)), 400
     except CommunityRequestError as exc:
         return jsonify(error=str(exc)), exc.status_code or 502
 
     return jsonify(result)
+
+
+@app.route("/api/community/code", methods=["GET"])
+def api_community_code_status():
+    return jsonify(has_code=bool(get_access_code()))
+
+
+@app.route("/api/community/code", methods=["POST"])
+def api_community_set_code():
+    data = request.get_json(force=True)
+    code = data.get("code", "").strip()
+    if not code:
+        return jsonify(error="Access code is required"), 400
+    set_access_code(code)
+    return jsonify(ok=True)
 
 
 if __name__ == "__main__":
