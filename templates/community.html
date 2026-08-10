@@ -12,6 +12,7 @@
       <a href="/">Crate Builder</a>
       <a href="/discover">Discover</a>
       <a href="/community" class="active">Community</a>
+      <a href="/settings">Settings</a>
     </nav>
     <h1>Community</h1>
     <p class="subtitle">
@@ -23,13 +24,9 @@
       crate to the Community feed" checked to share your own.
     </p>
 
-    <section class="panel" id="code_panel">
-      <div class="field">
-        <label for="access_code_input">Showfile access code</label>
-        <input id="access_code_input" type="text" placeholder="Paste your access code from Showfile Settings" />
-        <button id="save_code_btn" type="button">Save</button>
-      </div>
-      <span id="code_status" class="status"></span>
+    <section class="panel hidden" id="not_ready_panel">
+      <p class="subtitle" id="not_ready_message"></p>
+      <a href="/settings"><button type="button">Go to Settings</button></a>
     </section>
 
     <section class="panel hidden" id="search_panel">
@@ -38,7 +35,6 @@
         <input id="search_input" type="text" placeholder="e.g. techno, wedding, open format" />
         <button id="search_btn" type="button">Search</button>
       </div>
-      <button id="change_code_btn" type="button">Change access code</button>
       <span id="list_status" class="status"></span>
     </section>
 

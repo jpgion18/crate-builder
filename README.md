@@ -115,50 +115,33 @@ they don't own — even public ones. Logging in lets it read any playlist you
 can see in the Spotify app. Your login token is cached locally in
 `.spotify_token_cache` (gitignored) so you won't need to log in every run.
 
-### Optional: Showfile playlist sync
+### Optional: connect Showfile (Playlist Sync + Community)
 
 If you use [Showfile](https://github.com/jpgion18/showfile) to manage DJ
-gigs, crate-builder can push a matched playlist straight to an event's
-timeline so the couple sees song suggestions there. Set it up:
+gigs, open crate-builder's own **Settings** page and paste in your Showfile
+site URL, API key, and (if your subscription is active) your Community
+access code — all three come from Showfile's dashboard Settings page, and
+are saved locally on your machine, not in a file you have to hand-edit.
+Connecting Showfile unlocks two independent features:
 
-```bash
-cp .env.example .env
-# edit .env and fill in SHOWFILE_API_URL / SHOWFILE_API_KEY
-```
+- **Playlist Sync** — after previewing and selecting matches, enter an
+  event's code (e.g. `KATIE-DREW-1004`) in the **Sync to Showfile** field
+  and click the button — it sends the selected, matched tracks'
+  artist/title to that event's timeline, so the couple sees song
+  suggestions there. Replaces that event's synced playlist each time.
+- **Crate Builder Community** — a free perk for DJs with an active
+  Showfile subscription: publish and browse crate track lists on the
+  **Community** tab, for sharing and education, not audio. Only
+  artist/title metadata ever leaves your machine. To publish your own:
+  check **"Also publish this crate to the Community feed"** before
+  clicking Build Crate.
 
-Get your API key from the Showfile dashboard's "Playlist sync
-(crate-builder)" panel. After previewing and selecting matches below, enter
-the event's code (e.g. `KATIE-DREW-1004`) in the **Sync to Showfile** field
-and click the button — it sends the selected, matched tracks' artist/title
-to Showfile, replacing that event's synced playlist each time. This is
-additive to building a Serato crate, not a replacement for it; you can do
-either, both, or neither per session.
-
-### Optional: Community crate sharing
-
-[Crate Builder Community](https://github.com/jpgion18/crate-builder-community)
-is a free perk for DJs with an active [Showfile](https://github.com/jpgion18/showfile)
-subscription: publish and browse crate track lists — for sharing and
-education, not audio. Only artist/title metadata ever leaves your machine:
-no audio files, no local file paths, no library contents beyond what you
-explicitly publish. crate-builder itself stays free either way; this only
-gates the shared community feed, not the tool.
-
-```bash
-cp .env.example .env
-# COMMUNITY_API_URL already defaults to https://crate.showfile.events
-```
-
-Then open the **Community** tab and paste your access code — get it from
-your Showfile dashboard's Settings page (Crate Builder Community panel).
-It's saved locally, not in `.env`, so you only need to do this once. Once
-set, the Community tab lets you browse and search what others have
-published, and copy a track list to paste into the matcher above. To
-publish your own: check **"Also publish this crate to the Community
-feed"** before clicking Build Crate, optionally add a tag and a display
-name (not tied to your Showfile business name), and the selected/matched
-tracks get published alongside the local crate build. Nothing is
-published unless that checkbox is checked.
+Both are additive to building a local Serato crate, not a replacement for
+it, and crate-builder's core matching/crate-building stays fully free
+either way — Settings only gates these two Showfile-connected extras.
+`.env` still works as a fallback (`SHOWFILE_API_URL` / `SHOWFILE_API_KEY` /
+`COMMUNITY_API_URL`) if you'd rather not use the Settings page, but
+whatever's saved in Settings takes priority.
 
 ## Running it
 

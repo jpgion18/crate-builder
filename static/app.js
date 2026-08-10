@@ -39,12 +39,12 @@ refreshSpotifyStatus();
 
 async function refreshCommunityStatus() {
   const el = $("community_status");
-  if (el.dataset.communityConfigured !== "true") return; // COMMUNITY_API_URL isn't set; keep that message.
+  if (el.dataset.communityConfigured !== "true") return; // Community URL isn't configured yet; keep that message.
   try {
-    const res = await fetch("/api/community/code");
+    const res = await fetch("/api/settings");
     const data = await res.json();
-    if (!data.has_code) {
-      setStatus(el, "Get your access code from the Community tab (Showfile Settings) to enable publishing.");
+    if (!data.community_access_code) {
+      setStatus(el, "Add your Showfile access code in Settings to enable publishing.");
     }
   } catch (err) {
     // Best-effort; ignore failures here.

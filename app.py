@@ -14,15 +14,13 @@ import sys
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, redirect, request, render_template
 
-from crate_builder import discovery_store, serato_crate, serato_paths
+from crate_builder import discovery_store, local_config, serato_crate, serato_paths
 from crate_builder.community_client import (
     CommunityAccessCodeMissing,
     CommunityNotConfigured,
     CommunityRequestError,
-    get_access_code,
     list_crates,
     publish_crate,
-    set_access_code,
 )
 from crate_builder.input_parser import parse_input_text
 from crate_builder.library import scan_library
@@ -93,6 +91,19 @@ def _resolve_input_tracks_safe(input_text: str):
         return None, (message, 400)
 
 
+def _showfile_configured() -> bool:
+    settings = local_config.get_settings()
+    url = settings["showfile_url"] or os.environ.get("SHOWFILE_API_URL", "")
+    key = settings["showfile_api_key"] or os.environ.get("SHOWFILE_API_KEY", "")
+    return bool(url and key)
+
+
+def _community_configured() -> bool:
+    settings = local_config.get_settings()
+    url = settings["community_url"] or os.environ.get("COMMUNITY_API_URL", "")
+    return bool(url)
+
+
 @app.route("/")
 def index():
     return render_template(
@@ -100,8 +111,8 @@ def index():
         default_library_dir=serato_paths.guess_music_dir(),
         default_serato_dir=serato_paths.guess_serato_dir(),
         default_threshold=DEFAULT_THRESHOLD,
-        showfile_configured=bool(os.environ.get("SHOWFILE_API_URL") and os.environ.get("SHOWFILE_API_KEY")),
-        community_configured=bool(os.environ.get("COMMUNITY_API_URL")),
+        showfile_configured=_showfile_configured(),
+        community_configured=_community_configured(),
     )
 
 
@@ -117,6 +128,11 @@ def discover_page():
 @app.route("/community")
 def community_page():
     return render_template("community.html")
+
+
+@app.route("/settings")
+def settings_page():
+    return render_template("settings.html")
 
 
 @app.route("/login")
@@ -438,19 +454,26 @@ def api_community_list():
     return jsonify(result)
 
 
-@app.route("/api/community/code", methods=["GET"])
-def api_community_code_status():
-    return jsonify(has_code=bool(get_access_code()))
+@app.route("/api/settings", methods=["GET"])
+def api_settings_get():
+    settings = local_config.get_settings()
+    return jsonify(
+        **settings,
+        showfile_configured=_showfile_configured(),
+        community_configured=_community_configured(),
+    )
 
 
-@app.route("/api/community/code", methods=["POST"])
-def api_community_set_code():
+@app.route("/api/settings", methods=["POST"])
+def api_settings_post():
     data = request.get_json(force=True)
-    code = data.get("code", "").strip()
-    if not code:
-        return jsonify(error="Access code is required"), 400
-    set_access_code(code)
-    return jsonify(ok=True)
+    updates = {
+        key: data[key]
+        for key in ("showfile_url", "showfile_api_key", "community_url", "community_access_code")
+        if key in data
+    }
+    settings = local_config.update_settings(**updates)
+    return jsonify(**settings)
 
 
 if __name__ == "__main__":
