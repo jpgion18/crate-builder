@@ -75,6 +75,11 @@ def _request(method: str, path: str, **kwargs) -> dict:
 
     if not response.ok:
         message = payload.get("error", f"Community feed returned HTTP {response.status_code}")
+        if response.status_code == 401:
+            # The stored code was rejected outright (not just "subscription
+            # inactive", which is 403 and stays stored) — clear it so
+            # Settings shows "not connected" instead of failing silently.
+            local_config.update_settings(community_access_code="")
         raise CommunityRequestError(message, response.status_code)
 
     return payload

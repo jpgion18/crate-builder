@@ -48,6 +48,38 @@ def test_sync_playlist_raises_on_error_response(monkeypatch):
     assert exc_info.value.status_code == 401
 
 
+def test_sync_playlist_clears_stored_key_on_401():
+    local_config.update_settings(
+        showfile_url="https://www.showfile.events",
+        showfile_api_key="stale-key",
+        showfile_business_name="DJ Test",
+    )
+
+    mock_response = Mock(ok=False, status_code=401)
+    mock_response.json.return_value = {"error": "Invalid API key"}
+
+    with patch("crate_builder.showfile_client.requests.post", return_value=mock_response):
+        with pytest.raises(showfile_client.ShowfileSyncError):
+            showfile_client.sync_playlist("KATIE-DREW-1004", [{"artist": "A", "title": "B"}])
+
+    settings = local_config.get_settings()
+    assert settings["showfile_api_key"] == ""
+    assert settings["showfile_business_name"] == ""
+
+
+def test_sync_playlist_keeps_stored_key_on_other_errors():
+    local_config.update_settings(showfile_url="https://www.showfile.events", showfile_api_key="a-key")
+
+    mock_response = Mock(ok=False, status_code=404)
+    mock_response.json.return_value = {"error": "No event with that code"}
+
+    with patch("crate_builder.showfile_client.requests.post", return_value=mock_response):
+        with pytest.raises(showfile_client.ShowfileSyncError):
+            showfile_client.sync_playlist("BAD-CODE", [{"artist": "A", "title": "B"}])
+
+    assert local_config.get_settings()["showfile_api_key"] == "a-key"
+
+
 def test_sync_playlist_prefers_local_config_over_env(monkeypatch):
     monkeypatch.setenv("SHOWFILE_API_URL", "https://env.example.com")
     monkeypatch.setenv("SHOWFILE_API_KEY", "env-key")

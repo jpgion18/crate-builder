@@ -118,10 +118,12 @@ can see in the Spotify app. Your login token is cached locally in
 ### Optional: connect Showfile (Playlist Sync + Community)
 
 If you use [Showfile](https://github.com/jpgion18/showfile) to manage DJ
-gigs, open crate-builder's own **Settings** page and paste in your Showfile
-site URL, API key, and (if your subscription is active) your Community
-access code — all three come from Showfile's dashboard Settings page, and
-are saved locally on your machine, not in a file you have to hand-edit.
+gigs, open crate-builder's own **Settings** page and click **"Log in with
+Showfile"** — it opens your browser to log into your existing Showfile
+account and sends both credentials back automatically, no copy-pasting.
+(Manual entry — pasting the site URL, API key, and Community access code
+from Showfile's own Settings page — still works too, as a fallback; both
+save to the same place on your machine, not a file you have to hand-edit.)
 Connecting Showfile unlocks two independent features:
 
 - **Playlist Sync** — after previewing and selecting matches, enter an

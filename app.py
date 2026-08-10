@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import os
 import sys
+import webbrowser
+from urllib.parse import urlencode
 
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, redirect, request, render_template
@@ -26,6 +28,7 @@ from crate_builder.input_parser import parse_input_text
 from crate_builder.library import scan_library
 from crate_builder.matcher import DEFAULT_THRESHOLD, match_tracks, normalize
 from crate_builder.missing_log import build_missing_log_csv
+from crate_builder.showfile_auth import ShowfileAuthError, exchange_code, resolved_base_url, start_login
 from crate_builder.showfile_client import ShowfileNotConfigured, ShowfileSyncError, sync_playlist
 from crate_builder.spotify_client import (
     SpotifyNotConfigured,
@@ -53,6 +56,11 @@ app = Flask(
 # Single-user local tool: an in-memory cache keyed by library directory is
 # enough to avoid re-scanning the whole library on every request.
 _LIBRARY_CACHE: dict[str, list] = {}
+
+# Pending "Log in with Showfile" attempts: state -> (code_verifier, redirect_uri).
+# In-memory is fine — single-user, single-process, and an entry only lives
+# between /showfile/login and /showfile/callback a few seconds later.
+_SHOWFILE_AUTH_PENDING: dict[str, tuple[str, str]] = {}
 
 
 def _get_library(library_dir: str, rescan: bool = False):
@@ -153,6 +161,65 @@ def callback():
         return "Spotify login failed: no authorization code received.", 400
     handle_callback(code)
     return redirect("/")
+
+
+@app.route("/showfile/login")
+def showfile_login():
+    redirect_uri = request.host_url.rstrip("/") + "/showfile/callback"
+    authorize_url, state, code_verifier = start_login(redirect_uri)
+    _SHOWFILE_AUTH_PENDING[state] = (code_verifier, redirect_uri)
+    # Showfile login is magic-link email based: if this navigated inside
+    # the packaged app's embedded window (pywebview) rather than the
+    # system browser, clicking the emailed link would open a *different*
+    # window than the one waiting for the callback, stranding the flow.
+    # Opening the system browser explicitly avoids that regardless of
+    # whether crate-builder is running as `python app.py` or packaged.
+    webbrowser.open(authorize_url)
+    return redirect("/settings?showfile_pending=1")
+
+
+@app.route("/showfile/callback")
+def showfile_callback():
+    error = request.args.get("error")
+    state = request.args.get("state", "")
+    code = request.args.get("code")
+
+    pending = _SHOWFILE_AUTH_PENDING.pop(state, None)
+    if error:
+        return redirect(f"/settings?{urlencode({'showfile_error': error})}")
+    if not pending:
+        return "Showfile login failed: missing or expired state.", 400
+    if not code:
+        return "Showfile login failed: no authorization code received.", 400
+
+    code_verifier, redirect_uri = pending
+    try:
+        result = exchange_code(code, code_verifier, redirect_uri)
+    except ShowfileAuthError as exc:
+        return redirect(f"/settings?{urlencode({'showfile_error': str(exc)})}")
+
+    updates = {
+        "showfile_api_key": result.get("api_key", ""),
+        "community_access_code": result.get("crate_builder_code", ""),
+        "showfile_business_name": result.get("business_name", ""),
+    }
+    # Login only ever talks to Showfile, so it can't tell us a Community
+    # feed URL — but the whole point of this flow is "one login enables
+    # both features" (per Settings' own copy), so default it here too
+    # rather than leaving community_configured false until a manual save.
+    current = local_config.get_settings()
+    if not current["showfile_url"]:
+        updates["showfile_url"] = resolved_base_url()
+    if not current["community_url"]:
+        updates["community_url"] = os.environ.get("COMMUNITY_API_URL", "").strip() or "https://crate.showfile.events"
+    local_config.update_settings(**updates)
+    return redirect("/settings")
+
+
+@app.route("/api/showfile/disconnect", methods=["POST"])
+def api_showfile_disconnect():
+    local_config.update_settings(showfile_api_key="", community_access_code="", showfile_business_name="")
+    return jsonify(ok=True)
 
 
 @app.route("/api/spotify-status")

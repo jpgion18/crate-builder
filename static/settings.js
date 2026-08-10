@@ -14,6 +14,17 @@ document.querySelectorAll("[data-toggle-for]").forEach((btn) => {
   });
 });
 
+function renderConnectionStatus(data) {
+  if (data.showfile_business_name) {
+    $("connected_view").classList.remove("hidden");
+    $("login_view").classList.add("hidden");
+    $("connected_label").textContent = `Connected as ${data.showfile_business_name}`;
+  } else {
+    $("connected_view").classList.add("hidden");
+    $("login_view").classList.remove("hidden");
+  }
+}
+
 async function load() {
   try {
     const res = await fetch("/api/settings");
@@ -22,6 +33,7 @@ async function load() {
     $("showfile_api_key").value = data.showfile_api_key || "";
     $("community_access_code").value = data.community_access_code || "";
     $("community_url").value = data.community_url || "https://crate.showfile.events";
+    renderConnectionStatus(data);
   } catch (err) {
     setStatus($("save_status"), "Couldn't load current settings.", true);
   }
@@ -45,9 +57,54 @@ $("save_btn").addEventListener("click", async () => {
       throw new Error(data.error || "Save failed");
     }
     setStatus($("save_status"), "Saved.");
+    load();
   } catch (err) {
     setStatus($("save_status"), err.message, true);
   }
 });
+
+$("reconnect_btn").addEventListener("click", () => {
+  window.location.href = "/showfile/login";
+});
+
+$("disconnect_btn").addEventListener("click", async () => {
+  setStatus($("login_status"), "Disconnecting...");
+  try {
+    const res = await fetch("/api/showfile/disconnect", { method: "POST" });
+    if (!res.ok) throw new Error("Disconnect failed");
+    setStatus($("login_status"), "Disconnected.");
+    load();
+  } catch (err) {
+    setStatus($("login_status"), err.message, true);
+  }
+});
+
+async function pollUntilConnected() {
+  setStatus($("login_status"), "Waiting for you to finish logging in (opened in your browser)...");
+  const deadline = Date.now() + 2 * 60 * 1000; // 2 minutes
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const res = await fetch("/api/settings");
+    const data = await res.json();
+    if (data.showfile_business_name) {
+      setStatus($("login_status"), "");
+      renderConnectionStatus(data);
+      load();
+      return;
+    }
+  }
+  setStatus($("login_status"), "Still waiting — try again if the browser tab didn't open.", true);
+}
+
+const params = new URLSearchParams(window.location.search);
+const loginError = params.get("showfile_error");
+const loginPending = params.get("showfile_pending");
+window.history.replaceState({}, "", "/settings");
+
+if (loginError) {
+  setStatus($("login_status"), `Showfile login failed: ${loginError}`, true);
+} else if (loginPending) {
+  pollUntilConnected();
+}
 
 load();

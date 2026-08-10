@@ -56,6 +56,11 @@ def sync_playlist(event_code: str, tracks: list[dict]) -> dict:
 
     if not response.ok:
         message = payload.get("error", f"Showfile returned HTTP {response.status_code}")
+        if response.status_code == 401:
+            # The stored key was rejected (likely regenerated on Showfile's
+            # side) — clear it so Settings shows "not connected" instead of
+            # silently failing every sync from here on.
+            local_config.update_settings(showfile_api_key="", showfile_business_name="")
         raise ShowfileSyncError(message, response.status_code)
 
     return payload
