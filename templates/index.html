@@ -11,6 +11,7 @@
     <nav class="top-nav">
       <a href="/" class="active">Crate Builder</a>
       <a href="/discover">Discover</a>
+      <a href="/community">Community</a>
     </nav>
     <h1>Crate Builder</h1>
     <p class="subtitle">
@@ -86,6 +87,17 @@
         <button id="sync_showfile_btn" type="button">Sync to Showfile</button>
         <span id="sync_showfile_status" class="status">{% if not showfile_configured %}Set SHOWFILE_API_URL / SHOWFILE_API_KEY in .env to enable.{% endif %}</span>
       </div>
+
+      <div class="field community_field">
+        <label><input type="checkbox" id="community_publish" /> Also publish this crate to the Community feed</label>
+      </div>
+      <div class="field community_field">
+        <label for="community_tag">Tag (optional)</label>
+        <input id="community_tag" type="text" class="narrow" placeholder="e.g. techno, wedding, open format" />
+        <label for="community_display_name">Display name (optional)</label>
+        <input id="community_display_name" type="text" class="narrow" placeholder="Anonymous" />
+      </div>
+      <span id="community_status" class="status">{% if not community_configured %}Set COMMUNITY_API_URL in .env to enable.{% endif %}</span>
     </section>
   </main>
 

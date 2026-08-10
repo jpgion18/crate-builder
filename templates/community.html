@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Community - Crate Builder</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <main>
+    <nav class="top-nav">
+      <a href="/">Crate Builder</a>
+      <a href="/discover">Discover</a>
+      <a href="/community" class="active">Community</a>
+    </nav>
+    <h1>Community</h1>
+    <p class="subtitle">
+      Crates other DJs have published — anonymous, metadata only (no audio,
+      no file paths). Copy a track list and paste it into the main
+      <a href="/" style="color: inherit;">Crate Builder</a> tab to check it
+      against your own library. Build a crate there with "Also publish this
+      crate to the Community feed" checked to share your own.
+    </p>
+
+    <section class="panel">
+      <div class="field">
+        <label for="search_input">Search by crate name or tag</label>
+        <input id="search_input" type="text" placeholder="e.g. techno, wedding, open format" />
+        <button id="search_btn" type="button">Search</button>
+      </div>
+      <span id="list_status" class="status"></span>
+    </section>
+
+    <section id="crates_panel"></section>
+
+    <div class="load-more">
+      <button id="load_more_btn" type="button" class="hidden">Load more</button>
+    </div>
+  </main>
+
+  <script src="{{ url_for('static', filename='community.js') }}"></script>
+</body>
+</html>

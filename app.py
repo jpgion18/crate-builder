@@ -15,6 +15,12 @@ from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, redirect, request, render_template
 
 from crate_builder import discovery_store, serato_crate, serato_paths
+from crate_builder.community_client import (
+    CommunityNotConfigured,
+    CommunityRequestError,
+    list_crates,
+    publish_crate,
+)
 from crate_builder.input_parser import parse_input_text
 from crate_builder.library import scan_library
 from crate_builder.matcher import DEFAULT_THRESHOLD, match_tracks, normalize
@@ -92,6 +98,7 @@ def index():
         default_serato_dir=serato_paths.guess_serato_dir(),
         default_threshold=DEFAULT_THRESHOLD,
         showfile_configured=bool(os.environ.get("SHOWFILE_API_URL") and os.environ.get("SHOWFILE_API_KEY")),
+        community_configured=bool(os.environ.get("COMMUNITY_API_URL")),
     )
 
 
@@ -102,6 +109,11 @@ def discover_page():
         default_library_dir=serato_paths.guess_music_dir(),
         default_threshold=DEFAULT_THRESHOLD,
     )
+
+
+@app.route("/community")
+def community_page():
+    return render_template("community.html")
 
 
 @app.route("/login")
@@ -382,6 +394,45 @@ def api_sync_showfile():
         return jsonify(error=str(exc)), exc.status_code or 502
 
     return jsonify(count=result.get("count", len(tracks)))
+
+
+@app.route("/api/publish_crate", methods=["POST"])
+def api_publish_crate():
+    data = request.get_json(force=True)
+    crate_name = data.get("crate_name", "").strip()
+    tracks = data.get("tracks", [])
+    tag = data.get("tag", "").strip()
+    display_name = data.get("display_name", "").strip()
+
+    if not crate_name:
+        return jsonify(error="crate_name is required"), 400
+    if not tracks:
+        return jsonify(error="No tracks to publish"), 400
+
+    try:
+        result = publish_crate(crate_name, tracks, tag=tag, display_name=display_name)
+    except CommunityNotConfigured as exc:
+        return jsonify(error=str(exc)), 400
+    except CommunityRequestError as exc:
+        return jsonify(error=str(exc)), exc.status_code or 502
+
+    return jsonify(result)
+
+
+@app.route("/api/community/list", methods=["GET"])
+def api_community_list():
+    query = request.args.get("q", "")
+    limit = int(request.args.get("limit", 20))
+    offset = int(request.args.get("offset", 0))
+
+    try:
+        result = list_crates(query=query, limit=limit, offset=offset)
+    except CommunityNotConfigured as exc:
+        return jsonify(error=str(exc)), 400
+    except CommunityRequestError as exc:
+        return jsonify(error=str(exc)), exc.status_code or 502
+
+    return jsonify(result)
 
 
 if __name__ == "__main__":
