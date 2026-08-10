@@ -3,9 +3,10 @@
 A separate web app — see https://github.com/jpgion18/crate-builder-community.
 It's a free perk for DJs with an active Showfile subscription: every
 request needs an access code (from your Showfile dashboard's Settings
-page), saved locally here and sent as a bearer token. Only artist/title
-metadata ever leaves your machine: no audio, no file paths, no library
-contents beyond what you explicitly publish from a built crate.
+page, or crate-builder's own Settings page once you've saved it there),
+sent as a bearer token. Only artist/title metadata ever leaves your
+machine: no audio, no file paths, no library contents beyond what you
+explicitly publish from a built crate.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ import os
 
 import requests
 
-_CODE_PATH = os.path.join(os.path.expanduser("~"), ".crate_builder", "community_access_code")
+from crate_builder import local_config
 
 
 class CommunityNotConfigured(RuntimeError):
@@ -32,25 +33,20 @@ class CommunityRequestError(RuntimeError):
 
 
 def get_access_code() -> str:
-    try:
-        with open(_CODE_PATH) as f:
-            return f.read().strip()
-    except FileNotFoundError:
-        return ""
+    return local_config.get("community_access_code")
 
 
 def set_access_code(code: str) -> None:
-    os.makedirs(os.path.dirname(_CODE_PATH), exist_ok=True)
-    with open(_CODE_PATH, "w") as f:
-        f.write(code.strip())
+    local_config.update_settings(community_access_code=code)
 
 
 def _api_url() -> str:
-    api_url = os.environ.get("COMMUNITY_API_URL", "").strip().rstrip("/")
+    api_url = local_config.get("community_url") or os.environ.get("COMMUNITY_API_URL", "")
+    api_url = api_url.strip().rstrip("/")
     if not api_url:
         raise CommunityNotConfigured(
-            "COMMUNITY_API_URL is not set. Copy .env.example to .env and fill it "
-            "in with your Crate Builder Community deployment's URL."
+            "Crate Builder Community isn't set up yet. Add it on the Settings page, "
+            "or set COMMUNITY_API_URL in .env."
         )
     return api_url
 
@@ -60,7 +56,8 @@ def _request(method: str, path: str, **kwargs) -> dict:
     if not code:
         raise CommunityAccessCodeMissing(
             "No Crate Builder Community access code saved yet. Get one from your "
-            "Showfile dashboard's Settings page and paste it in the Community tab."
+            "Showfile dashboard's Settings page and paste it into crate-builder's "
+            "own Settings page."
         )
 
     headers = kwargs.pop("headers", {})

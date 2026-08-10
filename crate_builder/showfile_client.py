@@ -1,10 +1,10 @@
 """Sync a matched playlist to a Showfile (showfile.events) event.
 
 Showfile is a separate, optional web app for DJs managing wedding gigs — see
-https://github.com/jpgion18/showfile. If you use it, its dashboard has a
-"Playlist sync (crate-builder)" panel with your API key; set
-SHOWFILE_API_URL / SHOWFILE_API_KEY and crate-builder can push a matched
-playlist straight to an event's timeline suggestions.
+https://github.com/jpgion18/showfile. If you use it, connect it on
+crate-builder's own Settings page (site URL + API key, from Showfile's
+"Playlist sync (crate-builder)" dashboard panel) and crate-builder can push
+a matched playlist straight to an event's timeline suggestions.
 """
 
 from __future__ import annotations
@@ -12,6 +12,8 @@ from __future__ import annotations
 import os
 
 import requests
+
+from crate_builder import local_config
 
 
 class ShowfileNotConfigured(RuntimeError):
@@ -29,13 +31,12 @@ def sync_playlist(event_code: str, tracks: list[dict]) -> dict:
 
     `tracks` is a list of {"artist": str, "title": str} dicts.
     """
-    api_url = os.environ.get("SHOWFILE_API_URL", "").rstrip("/")
-    api_key = os.environ.get("SHOWFILE_API_KEY", "")
+    api_url = (local_config.get("showfile_url") or os.environ.get("SHOWFILE_API_URL", "")).strip().rstrip("/")
+    api_key = (local_config.get("showfile_api_key") or os.environ.get("SHOWFILE_API_KEY", "")).strip()
     if not api_url or not api_key:
         raise ShowfileNotConfigured(
-            "SHOWFILE_API_URL / SHOWFILE_API_KEY are not set. Copy .env.example "
-            "to .env and fill them in from your Showfile dashboard's "
-            '"Playlist sync (crate-builder)" panel.'
+            "Showfile isn't set up yet. Add it on the Settings page, or set "
+            "SHOWFILE_API_URL / SHOWFILE_API_KEY in .env."
         )
 
     try:

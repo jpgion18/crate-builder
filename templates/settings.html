@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Settings - Crate Builder</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <main>
+    <nav class="top-nav">
+      <a href="/">Crate Builder</a>
+      <a href="/discover">Discover</a>
+      <a href="/community">Community</a>
+      <a href="/settings" class="active">Settings</a>
+    </nav>
+    <h1>Settings</h1>
+    <p class="subtitle">
+      Connect your Showfile account once here — it powers both
+      <strong>Playlist Sync</strong> (push a matched crate to an event's
+      timeline) and <strong>Crate Builder Community</strong> (browse/publish
+      track lists, free with an active subscription). Neither is required —
+      crate-builder's core matching and Serato crate building work fully
+      without Showfile.
+    </p>
+
+    <section class="panel">
+      <h2>Connect Showfile</h2>
+      <p class="subtitle">
+        Find these on your Showfile dashboard's Settings page, in the
+        "Playlist Sync (crate-builder)" and "Crate Builder Community"
+        panels.
+      </p>
+
+      <div class="field">
+        <label for="showfile_url">Showfile site URL</label>
+        <input id="showfile_url" type="text" placeholder="https://www.showfile.events" />
+      </div>
+
+      <div class="field">
+        <label for="showfile_api_key">Playlist Sync API key</label>
+        <input id="showfile_api_key" type="password" placeholder="Paste your API key" />
+        <button type="button" class="secondary" data-toggle-for="showfile_api_key">Show</button>
+      </div>
+
+      <div class="field">
+        <label for="community_access_code">Community access code</label>
+        <input id="community_access_code" type="password" placeholder="Paste your access code" />
+        <button type="button" class="secondary" data-toggle-for="community_access_code">Show</button>
+      </div>
+
+      <div class="field">
+        <label for="community_url">Community feed URL</label>
+        <input id="community_url" type="text" placeholder="https://crate.showfile.events" />
+      </div>
+
+      <button id="save_btn" type="button">Save</button>
+      <span id="save_status" class="status"></span>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='settings.js') }}"></script>
+</body>
+</html>

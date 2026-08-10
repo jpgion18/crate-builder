@@ -2,13 +2,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from crate_builder import community_client
-
-
-@pytest.fixture(autouse=True)
-def community_code_path(tmp_path, monkeypatch):
-    """Redirect the access-code file to a temp path so tests don't touch ~/.crate_builder/."""
-    monkeypatch.setattr(community_client, "_CODE_PATH", str(tmp_path / "community_access_code"))
+from crate_builder import community_client, local_config
 
 
 def test_get_access_code_returns_empty_when_unset():
@@ -88,4 +82,23 @@ def test_list_crates_builds_query_params(monkeypatch):
         timeout=10,
         headers={"Authorization": "Bearer my-code"},
         params={"limit": 10, "offset": 20, "q": "techno"},
+    )
+
+
+def test_url_and_code_prefer_local_config_over_env(monkeypatch):
+    monkeypatch.setenv("COMMUNITY_API_URL", "https://env.example.com")
+    local_config.update_settings(community_url="https://settings.example.com", community_access_code="settings-code")
+
+    mock_response = Mock(ok=True)
+    mock_response.json.return_value = {"crates": [], "total": 0}
+
+    with patch("crate_builder.community_client.requests.request", return_value=mock_response) as mock_request:
+        community_client.list_crates()
+
+    mock_request.assert_called_once_with(
+        "GET",
+        "https://settings.example.com/api/crates",
+        timeout=10,
+        headers={"Authorization": "Bearer settings-code"},
+        params={"limit": 20, "offset": 0},
     )
