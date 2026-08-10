@@ -222,5 +222,14 @@ $("export_btn").addEventListener("click", () => {
   window.location.href = "/api/discover/export";
 });
 
+$("build_crate_btn").addEventListener("click", () => {
+  const input_text = $("input_text").value.trim();
+  if (!input_text) {
+    setStatus($("preview_status"), "Paste a tracklist first.", true);
+    return;
+  }
+  sendToCrateBuilder(input_text);
+});
+
 refreshSpotifyStatus();
 loadLog();

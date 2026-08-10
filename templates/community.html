@@ -10,6 +10,7 @@
   <main>
     <nav class="top-nav">
       <a href="/">Crate Builder</a>
+      <a href="/myevents">MyEvents</a>
       <a href="/discover">Discover</a>
       <a href="/community" class="active">Community</a>
       <a href="/settings">Settings</a>
@@ -18,10 +19,10 @@
     <p class="subtitle">
       A free perk for DJs with an active Showfile subscription: crates other
       DJs have published — anonymous, metadata only (no audio, no file
-      paths). Copy a track list and paste it into the main
-      <a href="/" style="color: inherit;">Crate Builder</a> tab to check it
-      against your own library. Build a crate there with "Also publish this
-      crate to the Community feed" checked to share your own.
+      paths). Send a track list to the main <a href="/" style="color: inherit;">Crate Builder</a>
+      tab to check it against your own library. Build a crate there with
+      "Also publish this crate to the Community feed" checked to share
+      your own.
     </p>
 
     <section class="panel hidden" id="not_ready_panel">
@@ -45,6 +46,7 @@
     </div>
   </main>
 
+  <script src="{{ url_for('static', filename='handoff.js') }}"></script>
   <script src="{{ url_for('static', filename='community.js') }}"></script>
 </body>
 </html>

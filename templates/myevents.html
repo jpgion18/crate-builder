@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MyEvents - Crate Builder</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <main>
+    <nav class="top-nav">
+      <a href="/">Crate Builder</a>
+      <a href="/myevents" class="active">MyEvents</a>
+      <a href="/discover">Discover</a>
+      <a href="/community">Community</a>
+      <a href="/settings">Settings</a>
+    </nav>
+    <h1>MyEvents</h1>
+    <p class="subtitle">
+      Songs your couples have entered on their Showfile timelines, pulled
+      automatically every few minutes — no manual export needed. Pick an
+      event to fuzzy-match its songs against your library and build a
+      crate, the same review flow as everywhere else in Crate Builder.
+    </p>
+
+    <section class="panel hidden" id="not_ready_panel">
+      <p class="subtitle" id="not_ready_message"></p>
+      <a href="/settings"><button type="button">Go to Settings</button></a>
+    </section>
+
+    <section class="panel hidden" id="events_panel">
+      <div class="results_header">
+        <h2>Events</h2>
+        <button id="refresh_btn" type="button" class="secondary">Refresh now</button>
+      </div>
+      <span id="refresh_status" class="status"></span>
+      <div id="tiles"></div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='handoff.js') }}"></script>
+  <script src="{{ url_for('static', filename='myevents.js') }}"></script>
+</body>
+</html>

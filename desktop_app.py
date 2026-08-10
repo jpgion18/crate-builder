@@ -16,6 +16,7 @@ import time
 import webview
 
 from app import app
+from crate_builder.myevents_poller import start_background_polling
 
 HOST = "127.0.0.1"
 
@@ -45,6 +46,7 @@ def main() -> None:
     )
     server.start()
     _wait_until_up(port)
+    start_background_polling()
 
     webview.create_window("Crate Builder", f"http://{HOST}:{port}", width=1100, height=850, min_size=(800, 600))
     webview.start()

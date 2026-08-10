@@ -10,6 +10,7 @@
   <main>
     <nav class="top-nav">
       <a href="/">Crate Builder</a>
+      <a href="/myevents">MyEvents</a>
       <a href="/discover" class="active">Discover</a>
       <a href="/community">Community</a>
       <a href="/settings">Settings</a>
@@ -52,6 +53,7 @@
       </div>
 
       <button id="preview_btn" type="button">Find New Tracks</button>
+      <button id="build_crate_btn" type="button">Build a Crate from this</button>
       <span id="preview_status" class="status"></span>
     </section>
 
@@ -96,6 +98,7 @@
     </section>
   </main>
 
+  <script src="{{ url_for('static', filename='handoff.js') }}"></script>
   <script src="{{ url_for('static', filename='discover.js') }}"></script>
 </body>
 </html>
