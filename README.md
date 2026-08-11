@@ -93,27 +93,33 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Optional: Spotify playlist support
+### Spotify playlist support
 
 Pasting plain text or CSV works with no setup. To paste a Spotify playlist
-URL directly:
-
-1. Create a free app at https://developer.spotify.com/dashboard.
-2. In the app's **Settings**, add this exact Redirect URI:
-   `http://127.0.0.1:5001/callback`
-3. Copy its Client ID and Client Secret:
-   ```bash
-   cp .env.example .env
-   # edit .env and fill in SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET
-   ```
-4. Run the app and click **Connect Spotify** in the page — it'll send you to
-   Spotify to log in once, then bring you back.
+URL directly, just click **Connect Spotify** — it opens your browser to log
+into Spotify once, then brings you back. No developer account, no API keys,
+nothing to configure; every crate-builder download shares one built-in
+Spotify app for this ("Log in with Spotify" works the same way as "Log in
+with Showfile" elsewhere in the app). Your login is cached locally in
+`~/.crate_builder/spotify_token_cache` so you won't need to log in every run.
 
 This uses a real (one-time) Spotify login rather than app-only auth,
 because Spotify's API no longer allows app-only tokens to read playlists
 they don't own — even public ones. Logging in lets it read any playlist you
-can see in the Spotify app. Your login token is cached locally in
-`.spotify_token_cache` (gitignored) so you won't need to log in every run.
+can see in the Spotify app, and doesn't give crate-builder (or its shared
+app) any access beyond what your own account already has.
+
+Prefer to use your own Spotify app instead of the shared one? Create a free
+one at https://developer.spotify.com/dashboard, add
+`http://127.0.0.1:5001/callback` as a Redirect URI, then:
+```bash
+cp .env.example .env
+# edit .env and fill in SPOTIFY_CLIENT_ID
+```
+No client secret needed either way — this uses PKCE (Authorization Code
+with Proof Key for Code Exchange), the flow Spotify recommends for apps
+that can't keep a secret confidential, which a distributed desktop binary
+can't.
 
 ### Optional: connect Showfile (Playlist Sync + Community)
 
