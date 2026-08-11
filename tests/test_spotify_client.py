@@ -4,6 +4,7 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 
 from crate_builder import spotify_client
+from crate_builder.input_parser import InputTrack
 
 
 @pytest.fixture(autouse=True)
@@ -71,3 +72,59 @@ def test_handle_callback_consumes_state_and_sends_matching_verifier():
     # State is single-use — a retry (or a second /callback hit) is rejected.
     with pytest.raises(spotify_client.SpotifyLoginExpired):
         spotify_client.handle_callback("auth-code", state)
+
+
+def test_fetch_playlist_tracks_handles_new_item_key(monkeypatch):
+    # Spotify's March 2026 migration to /playlists/{id}/items renamed each
+    # entry's nested track object from "track" to "item".
+    fake_sp = Mock()
+    fake_sp.playlist_items.return_value = {
+        "items": [{"item": {"name": "Song A", "artists": [{"name": "Artist A"}]}}],
+        "next": None,
+    }
+    monkeypatch.setattr(spotify_client, "_get_client", lambda: fake_sp)
+
+    tracks = spotify_client.fetch_playlist_tracks("playlist123")
+
+    assert tracks == [InputTrack(artist="Artist A", title="Song A", raw="Artist A - Song A")]
+
+
+def test_fetch_playlist_tracks_still_handles_old_track_key(monkeypatch):
+    # Belt-and-suspenders: keep working if a response ever comes back in the
+    # old shape too, since this couldn't be confirmed against the live API.
+    fake_sp = Mock()
+    fake_sp.playlist_items.return_value = {
+        "items": [{"track": {"name": "Song B", "artists": [{"name": "Artist B"}]}}],
+        "next": None,
+    }
+    monkeypatch.setattr(spotify_client, "_get_client", lambda: fake_sp)
+
+    tracks = spotify_client.fetch_playlist_tracks("playlist123")
+
+    assert tracks == [InputTrack(artist="Artist B", title="Song B", raw="Artist B - Song B")]
+
+
+def test_fetch_playlist_tracks_paginates_and_skips_local_files(monkeypatch):
+    # A local file (not on Spotify's servers) has no "item"/"track" object.
+    page_one = {
+        "items": [
+            {"item": {"name": "Song A", "artists": [{"name": "Artist A"}]}},
+            {"item": None},
+        ],
+        "next": "page2",
+    }
+    page_two = {
+        "items": [{"item": {"name": "Song B", "artists": [{"name": "Artist B"}]}}],
+        "next": None,
+    }
+    fake_sp = Mock()
+    fake_sp.playlist_items.return_value = page_one
+    fake_sp.next.return_value = page_two
+    monkeypatch.setattr(spotify_client, "_get_client", lambda: fake_sp)
+
+    tracks = spotify_client.fetch_playlist_tracks("playlist123")
+
+    assert tracks == [
+        InputTrack(artist="Artist A", title="Song A", raw="Artist A - Song A"),
+        InputTrack(artist="Artist B", title="Song B", raw="Artist B - Song B"),
+    ]
