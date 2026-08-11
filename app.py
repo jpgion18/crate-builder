@@ -31,6 +31,7 @@ from crate_builder.missing_log import build_missing_log_csv
 from crate_builder.myevents_poller import ShowfilePendingError, poll_once, start_background_polling
 from crate_builder.showfile_auth import ShowfileAuthError, exchange_code, resolved_base_url, start_login
 from crate_builder.showfile_client import ShowfileNotConfigured, ShowfileSyncError, sync_playlist
+from crate_builder.version import get_version
 from crate_builder.spotify_client import (
     SpotifyLoginExpired,
     SpotifyNotConfigured,
@@ -48,6 +49,7 @@ load_dotenv()
 # When packaged with PyInstaller, templates/static ship as extracted data
 # files under sys._MEIPASS rather than next to this source file.
 _BASE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+APP_VERSION = get_version(_BASE_DIR)
 
 app = Flask(
     __name__,
@@ -545,6 +547,7 @@ def api_settings_get():
         **settings,
         showfile_configured=_showfile_configured(),
         community_configured=_community_configured(),
+        app_version=APP_VERSION,
     )
 
 

@@ -33,6 +33,7 @@ async function load() {
     $("showfile_api_key").value = data.showfile_api_key || "";
     $("community_access_code").value = data.community_access_code || "";
     $("community_url").value = data.community_url || "https://crate.showfile.events";
+    $("app_version").textContent = `Crate Builder ${data.app_version}`;
     renderConnectionStatus(data);
   } catch (err) {
     setStatus($("save_status"), "Couldn't load current settings.", true);
