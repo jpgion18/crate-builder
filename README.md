@@ -44,6 +44,33 @@ This is paste-based rather than a live crawler — sites like
 would be a ToS/legal gray area, so you bring the tracklist and this tool
 does the cross-referencing.
 
+## Library Tools tab
+
+Housekeeping for your local library, separate from matching/building a
+crate:
+
+- **Duplicate finder** — scans your library for tracks that look like the
+  same song: exact matches after normalizing case/punctuation/noise words,
+  plus close variants (like a missing featured-artist credit) that share
+  the same title. It only *finds* duplicates and shows you each file's
+  path — nothing gets deleted automatically. Remove files yourself in
+  Finder/Explorer once you've reviewed a group.
+- **Metadata editor** — search your library, pick a track, and edit its
+  title/artist/album/genre/year/track number. This is the one part of
+  crate-builder that changes your actual music files rather than only
+  reading them (or, like crate-building, writing new files elsewhere) —
+  so every save backs up the original file first
+  (`~/.crate_builder/tag_backups/`, keyed by file path, one backup per
+  edit — not just the first one, so you can step back through a history of
+  changes). The **Recent backups** list on the same page can restore any
+  of them with one click.
+
+Not currently pulled from Spotify: release year and other metadata could
+in principle come from a matched Spotify track, but that's not wired up
+yet. Spotify's "audio features" data (danceability, energy, etc.) isn't an
+option at all — Spotify deprecated that whole API for new apps in late
+2024, which includes crate-builder's shared app.
+
 ## Desktop app (recommended for most users)
 
 Most people don't need to touch Python or a terminal at all: download the

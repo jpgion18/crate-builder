@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Library Tools - Crate Builder</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <main>
+    <nav class="top-nav">
+      <a href="/">Crate Builder</a>
+      <a href="/myevents">MyEvents</a>
+      <a href="/discover">Discover</a>
+      <a href="/community">Community</a>
+      <a href="/library" class="active">Library Tools</a>
+      <a href="/settings">Settings</a>
+    </nav>
+    <h1>Library Tools</h1>
+    <p class="subtitle">
+      Housekeeping for your local music library — separate from matching and
+      building crates. This is the first part of crate-builder that can
+      change your actual music files (not just read them), so every tag
+      edit backs up the original first.
+    </p>
+
+    <section class="panel">
+      <div class="field">
+        <label for="library_dir">Music library folder</label>
+        <input id="library_dir" type="text" value="{{ default_library_dir }}" />
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="results_header">
+        <h2>Duplicate tracks</h2>
+        <button id="scan_dupes_btn" type="button">Scan for Duplicates</button>
+      </div>
+      <p class="subtitle">
+        Groups tracks that look like the same song — exact matches after
+        normalizing case/punctuation, plus close variants (like a missing
+        featured-artist credit) that share the same title. This only
+        <em>finds</em> duplicates; nothing gets deleted automatically —
+        review each group and remove files yourself in Finder/Explorer using
+        the paths shown.
+      </p>
+      <span id="dupes_status" class="status"></span>
+      <div id="dupes_results"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Metadata editor</h2>
+      <p class="subtitle">
+        Search your library, pick a track, and edit its tags. The original
+        file is backed up before every save — see "Recent backups" below to
+        restore one if an edit goes wrong.
+      </p>
+
+      <div class="field">
+        <label for="metadata_search">Find a track</label>
+        <input id="metadata_search" type="text" placeholder="Search by artist or title" />
+        <button id="metadata_search_btn" type="button" class="secondary">Search</button>
+      </div>
+      <div id="metadata_search_results"></div>
+
+      <div id="metadata_edit_panel" class="hidden">
+        <h3 id="metadata_edit_title"></h3>
+        <div class="field">
+          <label for="tag_title">Title</label>
+          <input id="tag_title" type="text" />
+        </div>
+        <div class="field">
+          <label for="tag_artist">Artist</label>
+          <input id="tag_artist" type="text" />
+        </div>
+        <div class="field">
+          <label for="tag_album">Album</label>
+          <input id="tag_album" type="text" />
+        </div>
+        <div class="field">
+          <label for="tag_genre">Genre</label>
+          <input id="tag_genre" type="text" />
+        </div>
+        <div class="field">
+          <label for="tag_date">Year</label>
+          <input id="tag_date" type="text" class="narrow" />
+        </div>
+        <div class="field">
+          <label for="tag_tracknumber">Track #</label>
+          <input id="tag_tracknumber" type="text" class="narrow" />
+        </div>
+        <button id="save_tags_btn" type="button">Save Tags</button>
+        <span id="save_tags_status" class="status"></span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="results_header">
+        <h2>Recent backups</h2>
+        <button id="refresh_backups_btn" type="button" class="secondary">Refresh</button>
+      </div>
+      <table id="backups_table">
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>File</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <span id="backups_status" class="status"></span>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='library.js') }}"></script>
+</body>
+</html>

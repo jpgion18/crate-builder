@@ -24,9 +24,17 @@ from crate_builder.community_client import (
     list_crates,
     publish_crate,
 )
+from crate_builder.duplicates import find_duplicates
 from crate_builder.input_parser import parse_input_text
 from crate_builder.library import scan_library
 from crate_builder.matcher import DEFAULT_THRESHOLD, match_tracks, normalize
+from crate_builder.metadata_editor import (
+    MetadataError,
+    list_backups,
+    read_tags,
+    restore_backup,
+    write_tags,
+)
 from crate_builder.missing_log import build_missing_log_csv
 from crate_builder.myevents_poller import ShowfilePendingError, poll_once, start_background_polling
 from crate_builder.showfile_auth import ShowfileAuthError, exchange_code, resolved_base_url, start_login
@@ -140,6 +148,11 @@ def discover_page():
 @app.route("/community")
 def community_page():
     return render_template("community.html")
+
+
+@app.route("/library")
+def library_page():
+    return render_template("library.html", default_library_dir=serato_paths.guess_music_dir())
 
 
 @app.route("/myevents")
@@ -341,6 +354,76 @@ def api_search():
         for _, score, idx in top
     ]
     return jsonify(results=results)
+
+
+@app.route("/api/duplicates", methods=["POST"])
+def api_duplicates():
+    data = request.get_json(force=True)
+    library_dir = data.get("library_dir", "").strip()
+    if not library_dir:
+        return jsonify(error="library_dir is required"), 400
+    try:
+        library_tracks = _get_library(library_dir)
+    except NotADirectoryError as exc:
+        return jsonify(error=str(exc)), 400
+
+    groups = find_duplicates(library_tracks)
+    return jsonify(
+        groups=[
+            {
+                "reason": g.reason,
+                "tracks": [
+                    {"path": t.path, "artist": t.artist, "title": t.title, "album": t.album}
+                    for t in g.tracks
+                ],
+            }
+            for g in groups
+        ]
+    )
+
+
+@app.route("/api/metadata", methods=["GET"])
+def api_metadata_get():
+    path = request.args.get("path", "")
+    try:
+        tags = read_tags(path)
+    except MetadataError as exc:
+        return jsonify(error=str(exc)), 400
+    return jsonify(tags=tags)
+
+
+@app.route("/api/metadata", methods=["POST"])
+def api_metadata_post():
+    data = request.get_json(force=True)
+    path = data.get("path", "")
+    fields = data.get("fields", {})
+    try:
+        backup_path = write_tags(path, fields)
+    except MetadataError as exc:
+        return jsonify(error=str(exc)), 400
+    # The scanned library cache now has this track's stale tags — clear it
+    # so the next scan-dependent call (preview, search, duplicates) picks
+    # up what was actually just written, rather than showing an edit that
+    # silently didn't seem to take effect anywhere else in the app.
+    _LIBRARY_CACHE.clear()
+    return jsonify(ok=True, backup_path=backup_path)
+
+
+@app.route("/api/metadata/backups", methods=["GET"])
+def api_metadata_backups():
+    return jsonify(backups=list_backups())
+
+
+@app.route("/api/metadata/restore", methods=["POST"])
+def api_metadata_restore():
+    data = request.get_json(force=True)
+    backup_path = data.get("backup_path", "")
+    try:
+        restore_backup(backup_path)
+    except MetadataError as exc:
+        return jsonify(error=str(exc)), 400
+    _LIBRARY_CACHE.clear()
+    return jsonify(ok=True)
 
 
 @app.route("/api/build", methods=["POST"])
