@@ -146,14 +146,20 @@ def fetch_playlist_tracks(playlist_url_or_id: str) -> list[InputTrack]:
     sp = _get_client()
 
     tracks: list[InputTrack] = []
-    results = sp.playlist_items(
-        playlist_id,
-        fields="items(track(name,artists(name))),next",
-        additional_types=["track"],
-    )
+    # No `fields` filter here on purpose: the old filter (`items(track(...))`)
+    # assumed each entry's nested object was keyed "track", matching the
+    # deprecated /playlists/{id}/tracks endpoint. Spotify's March 2026
+    # migration to /playlists/{id}/items (spotipy>=2.26.0, see the version
+    # bump a couple releases back) renamed that key to "item" — a filter
+    # requesting the old field name could come back empty. Fetching
+    # unfiltered and checking both keys below is slightly more bandwidth for
+    # a personal-library-scale playlist, but survives either shape without
+    # needing to be exactly right about a schema this couldn't be verified
+    # against live (Spotify's API is unreachable from this environment).
+    results = sp.playlist_items(playlist_id, additional_types=["track"])
     while results:
-        for item in results.get("items", []):
-            track = item.get("track")
+        for entry in results.get("items", []):
+            track = entry.get("item") or entry.get("track")
             if not track:
                 continue
             title = track.get("name") or ""
