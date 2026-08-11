@@ -20,6 +20,25 @@ from crate_builder.myevents_poller import start_background_polling
 
 HOST = "127.0.0.1"
 
+# Tried in order and must match the redirect URIs registered on Spotify's
+# side (spotify_client._redirect_uri() defaults to the first one) — Spotify
+# requires an exact match, so binding to an arbitrary free port would break
+# the OAuth callback. Only falls through to a random port (Spotify login
+# unavailable that session, everything else unaffected) if all of these are
+# already taken, e.g. another crate-builder instance already running.
+_FIXED_PORTS = (5001, 5002, 5003)
+
+
+def _try_fixed_port() -> int | None:
+    for port in _FIXED_PORTS:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind((HOST, port))
+            return port
+        except OSError:
+            continue
+    return None
+
 
 def _free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -39,7 +58,7 @@ def _wait_until_up(port: int, timeout: float = 10.0) -> None:
 
 
 def main() -> None:
-    port = _free_port()
+    port = _try_fixed_port() or _free_port()
     server = threading.Thread(
         target=lambda: app.run(host=HOST, port=port, debug=False, use_reloader=False),
         daemon=True,

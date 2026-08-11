@@ -32,6 +32,7 @@ from crate_builder.myevents_poller import ShowfilePendingError, poll_once, start
 from crate_builder.showfile_auth import ShowfileAuthError, exchange_code, resolved_base_url, start_login
 from crate_builder.showfile_client import ShowfileNotConfigured, ShowfileSyncError, sync_playlist
 from crate_builder.spotify_client import (
+    SpotifyLoginExpired,
     SpotifyNotConfigured,
     SpotifyNotConnected,
     fetch_playlist_tracks,
@@ -152,20 +153,30 @@ def settings_page():
 @app.route("/login")
 def login():
     try:
-        return redirect(get_login_url())
+        authorize_url = get_login_url()
     except SpotifyNotConfigured as exc:
         return str(exc), 400
+    # Opened in the system browser rather than navigated in-place, same
+    # reasoning as Showfile login below: reliable regardless of whether
+    # this is running as `python app.py` or inside the packaged desktop
+    # app's embedded window.
+    webbrowser.open(authorize_url)
+    return redirect("/?spotify_pending=1")
 
 
 @app.route("/callback")
 def callback():
     code = request.args.get("code")
     error = request.args.get("error")
+    state = request.args.get("state", "")
     if error:
-        return f"Spotify login failed: {error}", 400
+        return redirect(f"/?{urlencode({'spotify_error': error})}")
     if not code:
-        return "Spotify login failed: no authorization code received.", 400
-    handle_callback(code)
+        return redirect(f"/?{urlencode({'spotify_error': 'no authorization code received'})}")
+    try:
+        handle_callback(code, state)
+    except SpotifyLoginExpired as exc:
+        return redirect(f"/?{urlencode({'spotify_error': str(exc)})}")
     return redirect("/")
 
 

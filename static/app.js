@@ -35,7 +35,34 @@ $("spotify_connect_btn").addEventListener("click", () => {
   window.location.href = "/login";
 });
 
+async function pollSpotifyUntilConnected() {
+  setStatus($("spotify_status"), "Waiting for you to finish logging in (opened in your browser)...");
+  const deadline = Date.now() + 2 * 60 * 1000; // 2 minutes
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const res = await fetch("/api/spotify-status");
+    const data = await res.json();
+    if (data.connected) {
+      refreshSpotifyStatus();
+      return;
+    }
+  }
+  setStatus($("spotify_status"), "Still waiting — try again if the browser tab didn't open.", true);
+}
+
 refreshSpotifyStatus();
+
+const spotifyParams = new URLSearchParams(window.location.search);
+const spotifyPending = spotifyParams.get("spotify_pending");
+const spotifyError = spotifyParams.get("spotify_error");
+if (spotifyPending || spotifyError) {
+  window.history.replaceState({}, "", "/");
+}
+if (spotifyError) {
+  setStatus($("spotify_status"), `Spotify login failed: ${spotifyError}`, true);
+} else if (spotifyPending) {
+  pollSpotifyUntilConnected();
+}
 
 async function refreshCommunityStatus() {
   const el = $("community_status");

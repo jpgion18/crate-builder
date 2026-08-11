@@ -3,7 +3,6 @@ __pycache__/
 .venv/
 venv/
 .env
-.spotify_token_cache
 discovery_log.json
 *.crate
 .DS_Store
