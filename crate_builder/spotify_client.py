@@ -37,7 +37,7 @@ _CACHE_PATH = os.path.join(os.path.expanduser("~"), ".crate_builder", "spotify_t
 # crate-builder's own Spotify app (PKCE, no secret) — shared by every
 # download so "Connect Spotify" works with zero setup. Falls back to
 # SPOTIFY_CLIENT_ID from .env for anyone running their own app instead.
-_SHARED_CLIENT_ID = ""
+_SHARED_CLIENT_ID = "e130117bfea2435a8a836b26c685ec18"
 
 # state -> code_verifier, for logins currently in progress. PKCE's
 # code_verifier is generated when the authorize URL is built (in /login)
