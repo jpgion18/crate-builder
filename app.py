@@ -8,6 +8,7 @@ Then open http://127.0.0.1:5001 in your browser.
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 import webbrowser
@@ -456,8 +457,15 @@ def api_build():
 
 @app.route("/api/missing-log", methods=["POST"])
 def api_missing_log():
-    data = request.get_json(force=True)
-    tracks = data.get("tracks", [])
+    # Submitted as a real HTML form (not fetch()) so the response's
+    # Content-Disposition: attachment header triggers a genuine top-level
+    # navigation the browser/webview handles as a native file download,
+    # rather than JS building a blob: URL and clicking a synthetic <a
+    # download> link — that pattern is known to just display the blob's
+    # raw content in place instead of downloading it inside the packaged
+    # desktop app's embedded webview (pywebview), with no way back.
+    tracks_json = request.form.get("tracks_json")
+    tracks = json.loads(tracks_json) if tracks_json else []
     if not tracks:
         return jsonify(error="No missing tracks to log"), 400
 

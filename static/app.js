@@ -301,7 +301,7 @@ async function buildCrate(overwrite = false) {
 
 $("build_btn").addEventListener("click", () => buildCrate(false));
 
-async function downloadMissingLog() {
+function downloadMissingLog() {
   const checkboxes = document.querySelectorAll('#results_table input[type="checkbox"]');
   const missing = [];
   checkboxes.forEach((cb) => {
@@ -316,30 +316,30 @@ async function downloadMissingLog() {
     return;
   }
 
-  setStatus($("build_status"), "Preparing log...");
-  try {
-    const res = await fetch("/api/missing-log", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tracks: missing }),
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || `Request failed (${res.status})`);
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "missing_tracks.csv";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    setStatus($("build_status"), `Logged ${missing.length} missing track(s).`);
-  } catch (err) {
-    setStatus($("build_status"), err.message, true);
-  }
+  // A real <form> POST (not fetch()+blob+synthetic click), so the
+  // response's Content-Disposition: attachment header triggers a genuine
+  // browser/webview-native download. The packaged desktop app's embedded
+  // webview doesn't reliably handle a blob: URL clicked via JS — it just
+  // displays the raw CSV in place instead of downloading it, with no way
+  // back. Same reasoning as Discover's "Download Log" button, which
+  // already uses a real navigation (a GET, since it needs no request body)
+  // and works correctly.
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = "/api/missing-log";
+  form.style.display = "none";
+
+  const input = document.createElement("input");
+  input.type = "hidden";
+  input.name = "tracks_json";
+  input.value = JSON.stringify(missing);
+  form.appendChild(input);
+
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+
+  setStatus($("build_status"), `Logged ${missing.length} missing track(s).`);
 }
 
 $("missing_log_btn").addEventListener("click", downloadMissingLog);
