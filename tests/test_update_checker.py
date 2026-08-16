@@ -112,3 +112,28 @@ def test_no_update_result_always_has_a_download_url_key():
     result = update_checker.check_for_update("dev")
     assert "download_url" in result
     assert result["download_url"] is None
+
+
+def test_stale_cache_older_than_current_version_is_not_an_update():
+    # Reproduces the real bug: check for updates while still on v0.9.0
+    # (caches "v0.9.1" as latest), then jump straight to installing v0.9.2
+    # before the 24h cache expires. The stale cached v0.9.1 must not read
+    # as an "update" now that v0.9.2 is actually running.
+    with patch("crate_builder.update_checker.requests.get", return_value=_mock_release("v0.9.1")):
+        update_checker.check_for_update("v0.9.0", force=True)
+
+    result = update_checker.check_for_update("v0.9.2")
+    assert result["update_available"] is False
+
+
+def test_numeric_comparison_not_lexicographic():
+    # "v0.10.0" < "v0.9.0" as plain strings, but is actually newer — a
+    # naive string/lexicographic comparison would get this backwards.
+    with patch("crate_builder.update_checker.requests.get", return_value=_mock_release("v0.10.0")):
+        result = update_checker.check_for_update("v0.9.0", force=True)
+    assert result["update_available"] is True
+
+
+def test_non_semver_tags_fall_back_to_simple_inequality():
+    assert update_checker._is_newer("nightly-build", "v0.9.0") is True
+    assert update_checker._is_newer("v0.9.0", "v0.9.0") is False
