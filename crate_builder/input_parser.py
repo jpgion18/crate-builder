@@ -28,6 +28,13 @@ ARTIST_HEADER_ALIASES = {
 
 # "Artist - Title", "Artist – Title" (en dash), "Artist — Title" (em dash)
 _LINE_SPLIT_PATTERN = re.compile(r"\s+[-–—]\s+")
+# Fallback for "Title by Artist" when no dash-style separator is found.
+_BY_SPLIT_PATTERN = re.compile(r"\s+by\s+", re.IGNORECASE)
+# A lone bullet character starting a line (after any leading digits/parens/
+# dots have already been stripped) — "- Artist - Title", "• Artist - Title".
+_LEADING_BULLET_PATTERN = re.compile(r"^[-•*]\s+")
+# Trailing mix/tracklist timestamps: "Track Name [03:14]", "Track Name (3:14)".
+_TRAILING_TIMESTAMP_PATTERN = re.compile(r"\s*[\[\(]\d{1,2}:\d{2}[\]\)]\s*$")
 
 
 @dataclass
@@ -88,13 +95,23 @@ def _parse_csv(text: str) -> list[InputTrack]:
 
 def _parse_plain_text(lines: list[str]) -> list[InputTrack]:
     results = []
-    for line in lines:
-        line = line.strip().lstrip("0123456789.() \t")
+    for original in lines:
+        original = original.strip()
+        line = original.lstrip("0123456789.() \t")
+        line = _LEADING_BULLET_PATTERN.sub("", line)
+        line = _TRAILING_TIMESTAMP_PATTERN.sub("", line).strip()
+        if not line:
+            continue
+
         parts = _LINE_SPLIT_PATTERN.split(line, maxsplit=1)
         if len(parts) == 2:
             artist, title = parts[0].strip(), parts[1].strip()
         else:
-            artist, title = "", line.strip()
+            by_parts = _BY_SPLIT_PATTERN.split(line, maxsplit=1)
+            if len(by_parts) == 2:
+                title, artist = by_parts[0].strip(), by_parts[1].strip()
+            else:
+                artist, title = "", line
         if title or artist:
-            results.append(InputTrack(artist=artist, title=title, raw=line))
+            results.append(InputTrack(artist=artist, title=title, raw=original))
     return results

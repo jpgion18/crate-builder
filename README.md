@@ -44,6 +44,19 @@ This is paste-based rather than a live crawler — sites like
 would be a ToS/legal gray area, so you bring the tracklist and this tool
 does the cross-referencing.
 
+**Sources** on the same page let you bookmark where you go looking for
+music — a Spotify playlist, a DJ pool, a tracklist site — organized by the
+kind of gig it's for (Wedding / Brunch / Happy Hour / Club Open / General).
+Pick a category tab, quick-add one of the suggested starters or save your
+own, then pick it from the dropdown next to "Source" to pre-fill that field
+before pasting — saved sources are just reusable labels, not something that
+fetches on your behalf. Categories only organize this bookmark list; the
+Discovery Log itself stays one flat list either way.
+
+The plain-text parser also now handles a couple more formats: "Title by
+Artist" (in addition to "Artist - Title"), and strips trailing mix
+timestamps like `[03:14]` before matching.
+
 ## Library Tools tab
 
 Housekeeping for your local library, separate from matching/building a

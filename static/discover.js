@@ -231,5 +231,122 @@ $("build_crate_btn").addEventListener("click", () => {
   sendToCrateBuilder(input_text);
 });
 
+// ---- Sources (bookmarked, organized by gig-type category) ----
+
+let categories = [];
+let sources = [];
+let suggested = [];
+let activeCategory = null;
+
+function renderCategoryTabs() {
+  const el = $("category_tabs");
+  el.innerHTML = categories
+    .map((c) => `<div class="tab ${c === activeCategory ? "active" : ""}" data-category="${escapeHtml(c)}">${escapeHtml(c)}</div>`)
+    .join("");
+  el.querySelectorAll("[data-category]").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      activeCategory = tab.dataset.category;
+      renderCategoryTabs();
+      renderSourcesList();
+      renderSuggestedList();
+      renderSavedSourceSelect();
+    });
+  });
+}
+
+function renderSourcesList() {
+  const el = $("sources_list");
+  const list = sources.filter((s) => s.category === activeCategory);
+  if (!list.length) {
+    el.innerHTML = `<p class="subtitle">No sources saved for ${escapeHtml(activeCategory || "")} yet.</p>`;
+    return;
+  }
+  el.innerHTML = list
+    .map(
+      (s) => `
+    <div class="source-row">
+      <span class="source-name">${escapeHtml(s.name)}</span>
+      <span class="source-type">${escapeHtml(s.type)}</span>
+      ${s.url ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">open</a>` : ""}
+      <button type="button" class="secondary" data-remove-source="${s.id}">Remove</button>
+    </div>`
+    )
+    .join("");
+  el.querySelectorAll("[data-remove-source]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await fetch(`/api/discover/sources/${btn.dataset.removeSource}`, { method: "DELETE" });
+      loadSources();
+    });
+  });
+}
+
+function renderSuggestedList() {
+  const el = $("suggested_list");
+  const list = suggested.filter((s) => s.category === activeCategory);
+  el.innerHTML = list
+    .map((s) => `<span class="suggested-chip" data-suggested-index="${suggested.indexOf(s)}">+ ${escapeHtml(s.name)}</span>`)
+    .join("");
+  el.querySelectorAll("[data-suggested-index]").forEach((chip) => {
+    chip.addEventListener("click", async () => {
+      const s = suggested[Number(chip.dataset.suggestedIndex)];
+      try {
+        await postJSON("/api/discover/sources", { name: s.name, url: s.url, type: s.type, category: s.category });
+        loadSources();
+      } catch (err) {
+        setStatus($("source_status"), err.message, true);
+      }
+    });
+  });
+}
+
+function renderSavedSourceSelect() {
+  const sel = $("saved_source_select");
+  const list = sources.filter((s) => s.category === activeCategory);
+  sel.innerHTML =
+    `<option value="">— pick a saved source —</option>` +
+    list.map((s) => `<option value="${escapeHtml(s.name)}">${escapeHtml(s.name)}</option>`).join("");
+}
+
+$("saved_source_select").addEventListener("change", () => {
+  if ($("saved_source_select").value) {
+    $("source_label").value = $("saved_source_select").value;
+  }
+});
+
+$("add_source_btn").addEventListener("click", async () => {
+  const name = $("new_source_name").value.trim();
+  const url = $("new_source_url").value.trim();
+  const type = $("new_source_type").value;
+  if (!name) {
+    setStatus($("source_status"), "Name your source first.", true);
+    return;
+  }
+  try {
+    await postJSON("/api/discover/sources", { name, url, type, category: activeCategory });
+    $("new_source_name").value = "";
+    $("new_source_url").value = "";
+    setStatus($("source_status"), "Source added.");
+    loadSources();
+  } catch (err) {
+    setStatus($("source_status"), err.message, true);
+  }
+});
+
+async function loadSources() {
+  const res = await fetch("/api/discover/sources");
+  const data = await res.json();
+  sources = data.sources || [];
+  suggested = data.suggested || [];
+  categories = data.categories || [];
+  if (!activeCategory || !categories.includes(activeCategory)) {
+    activeCategory = categories[0] || null;
+  }
+  renderCategoryTabs();
+  renderSourcesList();
+  renderSuggestedList();
+  renderSavedSourceSelect();
+}
+
 refreshSpotifyStatus();
 loadLog();
+loadSources();
