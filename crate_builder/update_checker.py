@@ -1,5 +1,10 @@
 """Checks GitHub's Releases API for a version newer than the one currently
 running, so Settings can show a lightweight "update available" banner.
+Compares versions numerically (_is_newer), not just for inequality — the
+cached "latest" can end up older than what's actually running (e.g. you
+checked while on an older build, then jumped straight to installing a
+newer one before the cache expired), and a plain != check would wrongly
+call that stale cache an "update."
 
 Read-only and best-effort: any failure (offline, GitHub down, rate
 limited) just means no banner shows — never an error the user has to deal
@@ -40,6 +45,31 @@ def _asset_download_url() -> str | None:
     if not asset_name:
         return None
     return f"https://github.com/jpgion18/crate-builder/releases/latest/download/{asset_name}"
+
+
+def _parse_version(version: str) -> tuple[int, ...] | None:
+    """"v0.9.2" -> (0, 9, 2). None if it doesn't parse as plain dotted
+    integers, so a weird/non-semver tag never crashes this — it just
+    can't be compared numerically."""
+    try:
+        return tuple(int(p) for p in version.lstrip("v").split("."))
+    except ValueError:
+        return None
+
+
+def _is_newer(candidate: str, current: str) -> bool:
+    """True only if candidate is an actually newer version than current —
+    not just a different string. Matters because the cached "latest" can
+    be older than what's actually running: check while still on v0.9.0,
+    cache says v0.9.1, then jump straight to installing v0.9.2 — a plain
+    inequality check would wrongly call that stale v0.9.1 an "update."
+    Falls back to simple inequality if either side doesn't parse as plain
+    semver, so an unusual tag format still degrades safely."""
+    candidate_parsed = _parse_version(candidate)
+    current_parsed = _parse_version(current)
+    if candidate_parsed is None or current_parsed is None:
+        return candidate != current
+    return candidate_parsed > current_parsed
 
 
 def _load_cache() -> dict:
@@ -105,7 +135,7 @@ def check_for_update(current_version: str, force: bool = False) -> dict:
         # flapping the banner on/off over a transient network blip.
 
     latest = cache.get("latest_version")
-    if not latest or latest == current_version:
+    if not latest or not _is_newer(latest, current_version):
         return dict(_NO_UPDATE)
     return {
         "update_available": True,
