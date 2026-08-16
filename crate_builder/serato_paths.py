@@ -29,6 +29,14 @@ def subcrates_dir(serato_dir: str) -> str:
     return os.path.join(serato_dir, "Subcrates")
 
 
+def database_v2_path(serato_dir: str) -> str:
+    """Serato's own track database — every track it knows about, with its
+    own metadata (energy, key, grouping, etc.), independent of any one
+    crate. Same TLV chunk format as a .crate file (see serato_crate.py),
+    but with a nested structure — see serato_database.py."""
+    return os.path.join(serato_dir, "database V2")
+
+
 def sanitize_crate_name(name: str) -> str:
     """Turn a user-supplied crate name into a safe .crate filename.
 

@@ -1,5 +1,9 @@
 """Find likely-duplicate tracks in a scanned library.
 
+Works with anything exposing `.artist`/`.title` — currently either
+library.Track (a folder scan) or serato_database.SeratoDbTrack (Serato's
+own database), whichever the caller passes in.
+
 Two passes, in decreasing order of confidence:
 
 1. Exact match after normalization (the same `normalize()`d "artist title"
@@ -26,21 +30,24 @@ from rapidfuzz import fuzz
 
 from crate_builder.library import Track
 from crate_builder.matcher import normalize
+from crate_builder.serato_database import SeratoDbTrack
 
 DEFAULT_FUZZY_THRESHOLD = 90
+
+AnyTrack = Track | SeratoDbTrack
 
 
 @dataclass
 class DuplicateGroup:
-    tracks: list[Track]
+    tracks: list[AnyTrack]
     reason: str  # "exact" or "fuzzy"
 
 
-def find_duplicates(tracks: list[Track], fuzzy_threshold: int = DEFAULT_FUZZY_THRESHOLD) -> list[DuplicateGroup]:
+def find_duplicates(tracks: list[AnyTrack], fuzzy_threshold: int = DEFAULT_FUZZY_THRESHOLD) -> list[DuplicateGroup]:
     groups: list[DuplicateGroup] = []
     grouped_ids: set[int] = set()
 
-    exact_buckets: dict[str, list[Track]] = defaultdict(list)
+    exact_buckets: dict[str, list[AnyTrack]] = defaultdict(list)
     for t in tracks:
         key = normalize(f"{t.artist} {t.title}")
         if key:
@@ -51,7 +58,7 @@ def find_duplicates(tracks: list[Track], fuzzy_threshold: int = DEFAULT_FUZZY_TH
             groups.append(DuplicateGroup(tracks=bucket, reason="exact"))
             grouped_ids.update(id(t) for t in bucket)
 
-    title_buckets: dict[str, list[Track]] = defaultdict(list)
+    title_buckets: dict[str, list[AnyTrack]] = defaultdict(list)
     for t in tracks:
         if id(t) in grouped_ids:
             continue
@@ -69,10 +76,10 @@ def find_duplicates(tracks: list[Track], fuzzy_threshold: int = DEFAULT_FUZZY_TH
     return groups
 
 
-def _fuzzy_group(tracks: list[Track], threshold: int) -> list[list[Track]]:
+def _fuzzy_group(tracks: list[AnyTrack], threshold: int) -> list[list[AnyTrack]]:
     """Groups tracks within a single title-bucket by fuzzy artist+title score."""
     assigned: set[int] = set()
-    result: list[list[Track]] = []
+    result: list[list[AnyTrack]] = []
     for i, t in enumerate(tracks):
         if id(t) in assigned:
             continue
