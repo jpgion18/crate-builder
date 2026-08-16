@@ -37,7 +37,10 @@ a persistent **Discovery Log** — a running "to check out" list stored
 locally in `discovery_log.json` (gitignored) that survives across
 sessions, dedupes overlapping tracklists automatically, and lets you mark
 each entry as new / acquired / dismissed as you work through it. Export it
-to CSV anytime.
+to CSV anytime, or check off entries and **"Build a Crate from Selected"**
+to send them straight into the main Crate Builder page — the log isn't a
+dead end, whatever you've saved up over time can become a real crate
+whenever you're ready.
 
 This is paste-based rather than a live crawler — sites like
 1001tracklists and Beatport don't offer public APIs, and scraping them
