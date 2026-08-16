@@ -3,17 +3,20 @@ running, so Settings can show a lightweight "update available" banner.
 
 Read-only and best-effort: any failure (offline, GitHub down, rate
 limited) just means no banner shows — never an error the user has to deal
-with. Never auto-downloads or auto-installs anything — these builds are
-unsigned, so replacing a running app safely isn't something to attempt
-without proper code signing in place first. This only ever surfaces a link
-to the GitHub release page for the user to grab manually, same as the
-existing download flow.
+with. Never auto-installs anything — these builds are unsigned, so
+replacing a running app safely isn't something to attempt without proper
+code signing in place first. This surfaces a direct link to *download* the
+right zip for the current OS (not just the release page), reusing GitHub's
+stable /releases/latest/download/<asset> pattern — same mechanism as the
+"Download for Mac/Windows" buttons on the community site — but stops
+short of installing it.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 
 import requests
@@ -22,7 +25,21 @@ RELEASES_LATEST_URL = "https://api.github.com/repos/jpgion18/crate-builder/relea
 CHECK_INTERVAL_SECONDS = 24 * 60 * 60  # once a day is plenty for a desktop app
 CACHE_PATH = os.path.join(os.path.expanduser("~"), ".crate_builder", "update_check.json")
 
-_NO_UPDATE = {"update_available": False, "latest_version": None, "release_url": None}
+# sys.platform of the machine this is actually running on -> the matching
+# release asset, same filenames build-desktop.yml has always published.
+_ASSET_NAMES = {
+    "darwin": "CrateBuilder-macos.zip",
+    "win32": "CrateBuilder-windows.zip",
+}
+
+_NO_UPDATE = {"update_available": False, "latest_version": None, "release_url": None, "download_url": None}
+
+
+def _asset_download_url() -> str | None:
+    asset_name = _ASSET_NAMES.get(sys.platform)
+    if not asset_name:
+        return None
+    return f"https://github.com/jpgion18/crate-builder/releases/latest/download/{asset_name}"
 
 
 def _load_cache() -> dict:
@@ -61,8 +78,11 @@ def _fetch_latest_release() -> dict | None:
 
 
 def check_for_update(current_version: str, force: bool = False) -> dict:
-    """Returns {"update_available", "latest_version", "release_url"}.
-    Never raises — any failure just reports no update available."""
+    """Returns {"update_available", "latest_version", "release_url",
+    "download_url"}. download_url is the direct link to the zip matching
+    the OS this is actually running on, or None on a platform without a
+    published build (e.g. Linux). Never raises — any failure just reports
+    no update available."""
     # A source checkout / manual build has no real version to compare —
     # comparing "dev" against a real tag would always (wrongly) look like
     # an update is available.
@@ -87,4 +107,9 @@ def check_for_update(current_version: str, force: bool = False) -> dict:
     latest = cache.get("latest_version")
     if not latest or latest == current_version:
         return dict(_NO_UPDATE)
-    return {"update_available": True, "latest_version": latest, "release_url": cache.get("release_url")}
+    return {
+        "update_available": True,
+        "latest_version": latest,
+        "release_url": cache.get("release_url"),
+        "download_url": _asset_download_url(),
+    }

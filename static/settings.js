@@ -114,13 +114,17 @@ async function checkForUpdate() {
     const data = await res.json();
     if (!data.update_available) return;
     const btn = $("update_btn");
-    btn.textContent = `Update available: ${data.latest_version}`;
+    // download_url is the direct zip for this OS; falls back to the release
+    // page on a platform without a published build (shouldn't normally
+    // happen for the packaged app, but keeps the button working either way).
+    const url = data.download_url || data.release_url;
+    btn.textContent = data.download_url ? `Download update: ${data.latest_version}` : `Update available: ${data.latest_version}`;
     btn.classList.remove("hidden");
     btn.addEventListener("click", () => {
       fetch("/api/open-release", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: data.release_url }),
+        body: JSON.stringify({ url }),
       });
     });
   } catch (err) {
