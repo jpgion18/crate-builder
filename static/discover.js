@@ -164,9 +164,19 @@ async function loadLog() {
 function renderLog() {
   const tbody = document.querySelector("#log_table tbody");
   tbody.innerHTML = "";
+  $("log_select_all").checked = false;
 
   lastLogEntries.forEach((entry) => {
     const tr = document.createElement("tr");
+
+    const checkboxTd = document.createElement("td");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "log_sel";
+    checkbox.dataset.id = entry.id;
+    checkbox.checked = entry.status === "new";
+    checkboxTd.appendChild(checkbox);
+    tr.appendChild(checkboxTd);
 
     const trackTd = document.createElement("td");
     trackTd.innerHTML = `<span class="track-line">${escapeHtml(entry.title)}</span><span class="track-sub">${escapeHtml(entry.artist)}</span>`;
@@ -220,6 +230,22 @@ $("export_btn").addEventListener("click", () => {
     return;
   }
   window.location.href = "/api/discover/export";
+});
+
+$("log_select_all").addEventListener("change", () => {
+  const checked = $("log_select_all").checked;
+  document.querySelectorAll(".log_sel").forEach((cb) => (cb.checked = checked));
+});
+
+$("build_crate_from_log_btn").addEventListener("click", () => {
+  const ids = Array.from(document.querySelectorAll(".log_sel:checked")).map((cb) => cb.dataset.id);
+  const selected = lastLogEntries.filter((e) => ids.includes(e.id));
+  if (selected.length === 0) {
+    setStatus($("log_status"), "Select at least one track from the log first.", true);
+    return;
+  }
+  const text = selected.map((e) => (e.artist ? `${e.artist} - ${e.title}` : e.title)).join("\n");
+  sendToCrateBuilder(text);
 });
 
 $("build_crate_btn").addEventListener("click", () => {
