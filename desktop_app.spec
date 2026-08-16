@@ -39,6 +39,7 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,
+    icon="assets/icon.ico",
 )
 
 coll = COLLECT(
@@ -56,4 +57,5 @@ if sys.platform == "darwin":
         coll,
         name="CrateBuilder.app",
         bundle_identifier="com.crate-builder.desktop",
+        icon="assets/icon.icns",
     )

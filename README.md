@@ -128,7 +128,9 @@ useful for development, or if you'd rather build/run it yourself.
 ### Building the desktop app yourself
 
 A GitHub Actions workflow (`.github/workflows/build-desktop.yml`) builds
-macOS and Windows binaries via PyInstaller.
+macOS and Windows binaries via PyInstaller, using the app icon in
+`assets/` (`icon.icns` / `icon.ico`, both generated from `icon_master.png`
+— the source to regenerate from if the icon ever changes).
 
 - **Push a `v*` tag** (e.g. `v0.1.0`) to publish a proper
   [Release](https://github.com/jpgion18/crate-builder/releases) with

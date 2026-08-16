@@ -3,13 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}" />
   <title>Discover - Crate Builder</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
   <main>
     <nav class="top-nav">
-      <a href="/">Crate Builder</a>
+      <a href="/" class="brand"><img src="{{ url_for('static', filename='logo.png') }}" alt="" class="brand-logo" />Crate Builder</a>
       <a href="/myevents">MyEvents</a>
       <a href="/discover" class="active">Discover</a>
       <a href="/community">Community</a>

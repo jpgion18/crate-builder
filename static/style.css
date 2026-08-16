@@ -48,6 +48,20 @@ h1 { margin-bottom: 0.25rem; }
 
 .top-nav a:hover { color: var(--text); }
 
+.top-nav a.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text);
+}
+
+.brand-logo {
+  width: 20px;
+  height: 20px;
+  border-radius: 22%;
+  display: block;
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
