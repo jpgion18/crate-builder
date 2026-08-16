@@ -80,3 +80,35 @@ def test_http_error_status_is_treated_as_failure():
     with patch("crate_builder.update_checker.requests.get", return_value=resp):
         result = update_checker.check_for_update("v0.8.0")
     assert result["update_available"] is False
+
+
+def test_download_url_points_at_the_macos_zip_on_darwin(monkeypatch):
+    monkeypatch.setattr(update_checker.sys, "platform", "darwin")
+    with patch("crate_builder.update_checker.requests.get", return_value=_mock_release("v0.9.0")):
+        result = update_checker.check_for_update("v0.8.0")
+    assert result["download_url"] == (
+        "https://github.com/jpgion18/crate-builder/releases/latest/download/CrateBuilder-macos.zip"
+    )
+
+
+def test_download_url_points_at_the_windows_zip_on_win32(monkeypatch):
+    monkeypatch.setattr(update_checker.sys, "platform", "win32")
+    with patch("crate_builder.update_checker.requests.get", return_value=_mock_release("v0.9.0")):
+        result = update_checker.check_for_update("v0.8.0")
+    assert result["download_url"] == (
+        "https://github.com/jpgion18/crate-builder/releases/latest/download/CrateBuilder-windows.zip"
+    )
+
+
+def test_download_url_is_none_on_an_unsupported_platform(monkeypatch):
+    monkeypatch.setattr(update_checker.sys, "platform", "linux")
+    with patch("crate_builder.update_checker.requests.get", return_value=_mock_release("v0.9.0")):
+        result = update_checker.check_for_update("v0.8.0")
+    assert result["update_available"] is True
+    assert result["download_url"] is None
+
+
+def test_no_update_result_always_has_a_download_url_key():
+    result = update_checker.check_for_update("dev")
+    assert "download_url" in result
+    assert result["download_url"] is None

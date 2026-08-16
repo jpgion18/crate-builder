@@ -119,11 +119,12 @@ certificate), so the OS will warn you the first time you open one:
 
 Settings checks once a day whether a newer release is out (a plain,
 unauthenticated call to GitHub's releases API — nothing is sent about you
-or your usage) and shows an **"Update available"** button if so, linking to
-the release page to download it yourself. There's no auto-updater — these
-builds being unsigned makes safely replacing a running app a much bigger
-undertaking than a version check, so for now this just tells you one's
-ready rather than installing it for you.
+or your usage) and shows a **"Download update"** button if so — clicking it
+downloads the right zip for your OS directly (no release page to click
+through). There's no auto-updater — these builds being unsigned makes
+safely replacing a running app a much bigger undertaking than a version
+check, so for now it gets the download started for you but still leaves
+you to unzip and replace the app yourself, the same as installing it fresh.
 
 The sections below (Setup, Running it) are for running from source instead —
 useful for development, or if you'd rather build/run it yourself.
