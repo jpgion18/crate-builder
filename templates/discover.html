@@ -24,6 +24,46 @@
     </p>
 
     <section class="panel">
+      <div class="results_header">
+        <h2>Sources</h2>
+      </div>
+      <p class="subtitle">
+        Bookmark where you go looking for music, organized by the kind of
+        gig it's for — pick a tab, then quick-add a starter or save your
+        own. Saved sources just pre-fill the "Source" field below when
+        pasting; they don't do any fetching themselves.
+      </p>
+      <div class="tabs" id="category_tabs"></div>
+      <div id="sources_list"></div>
+      <div id="suggested_list" style="margin-top: 0.6rem;"></div>
+
+      <details style="margin-top: 1rem;">
+        <summary>+ Add a source</summary>
+        <div class="field">
+          <label for="new_source_name">Name</label>
+          <input id="new_source_name" type="text" placeholder="e.g. DJCity Weekly Pool" />
+        </div>
+        <div class="field">
+          <label for="new_source_url">URL (optional)</label>
+          <input id="new_source_url" type="text" placeholder="https://..." />
+        </div>
+        <div class="field">
+          <label for="new_source_type">Type</label>
+          <select id="new_source_type">
+            <option>Spotify</option>
+            <option>Tracklist</option>
+            <option>Blog</option>
+            <option>Pool</option>
+            <option>Social</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <button id="add_source_btn" type="button">Add source</button>
+        <span id="source_status" class="status"></span>
+      </details>
+    </section>
+
+    <section class="panel">
       <div class="field">
         <label for="library_dir">Music library folder</label>
         <input id="library_dir" type="text" value="{{ default_library_dir }}" />
@@ -40,6 +80,7 @@
       <div class="field">
         <label for="source_label">Source</label>
         <input id="source_label" type="text" placeholder="e.g. Solomun @ Tomorrowland 2026, or Beatport Tech House Chart" />
+        <select id="saved_source_select"></select>
       </div>
 
       <div class="field">

@@ -17,7 +17,7 @@ from urllib.parse import urlencode
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, redirect, request, render_template
 
-from crate_builder import discovery_store, local_config, pending_store, serato_crate, serato_paths
+from crate_builder import discover_sources, discovery_store, local_config, pending_store, serato_crate, serato_paths
 from crate_builder.community_client import (
     CommunityAccessCodeMissing,
     CommunityNotConfigured,
@@ -621,6 +621,35 @@ def api_discover_export():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=discovery_log.csv"},
     )
+
+
+@app.route("/api/discover/sources", methods=["GET"])
+def api_discover_sources_list():
+    return jsonify(
+        sources=discover_sources.list_sources(),
+        suggested=discover_sources.SUGGESTED,
+        categories=discover_sources.CATEGORIES,
+    )
+
+
+@app.route("/api/discover/sources", methods=["POST"])
+def api_discover_sources_add():
+    data = request.get_json(force=True)
+    try:
+        entry = discover_sources.add_source(
+            data.get("name", ""), data.get("url", ""), data.get("type", ""), data.get("category", "")
+        )
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+    return jsonify(source=entry)
+
+
+@app.route("/api/discover/sources/<source_id>", methods=["DELETE"])
+def api_discover_sources_delete(source_id):
+    ok = discover_sources.remove_source(source_id)
+    if not ok:
+        return jsonify(error="Source not found"), 404
+    return jsonify(ok=True)
 
 
 @app.route("/api/sync_showfile", methods=["POST"])
