@@ -41,6 +41,7 @@ from crate_builder.myevents_poller import ShowfilePendingError, poll_once, start
 from crate_builder.serato_database import SeratoDatabaseError, parse_database
 from crate_builder.showfile_auth import ShowfileAuthError, exchange_code, resolved_base_url, start_login
 from crate_builder.showfile_client import ShowfileNotConfigured, ShowfileSyncError, sync_playlist
+from crate_builder.update_checker import check_for_update
 from crate_builder.version import get_version
 from crate_builder.yearcheck_runner import YearCheckError
 from crate_builder import yearcheck_runner, yearcheck_store
@@ -733,6 +734,25 @@ def api_settings_post():
     }
     settings = local_config.update_settings(**updates)
     return jsonify(**settings)
+
+
+@app.route("/api/update-check", methods=["GET"])
+def api_update_check():
+    force = request.args.get("force") == "1"
+    return jsonify(**check_for_update(APP_VERSION, force=force))
+
+
+@app.route("/api/open-release", methods=["POST"])
+def api_open_release():
+    data = request.get_json(force=True)
+    url = data.get("url", "")
+    # Only ever open a real GitHub URL — this exists to launch the system
+    # browser on a link we fetched from GitHub's own API, not as a general
+    # "open any URL the frontend hands us" endpoint.
+    if not url.startswith("https://github.com/"):
+        return jsonify(error="Invalid URL"), 400
+    webbrowser.open(url)
+    return jsonify(ok=True)
 
 
 @app.route("/api/myevents", methods=["GET"])

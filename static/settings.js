@@ -108,4 +108,26 @@ if (loginError) {
   pollUntilConnected();
 }
 
+async function checkForUpdate() {
+  try {
+    const res = await fetch("/api/update-check");
+    const data = await res.json();
+    if (!data.update_available) return;
+    const btn = $("update_btn");
+    btn.textContent = `Update available: ${data.latest_version}`;
+    btn.classList.remove("hidden");
+    btn.addEventListener("click", () => {
+      fetch("/api/open-release", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: data.release_url }),
+      });
+    });
+  } catch (err) {
+    // Best-effort — no banner if the check fails, nothing to show the user.
+  }
+}
+
+checkForUpdate();
+
 load();
