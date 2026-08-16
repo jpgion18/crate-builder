@@ -38,9 +38,12 @@ from crate_builder.metadata_editor import (
 )
 from crate_builder.missing_log import build_missing_log_csv
 from crate_builder.myevents_poller import ShowfilePendingError, poll_once, start_background_polling
+from crate_builder.serato_database import SeratoDatabaseError, parse_database
 from crate_builder.showfile_auth import ShowfileAuthError, exchange_code, resolved_base_url, start_login
 from crate_builder.showfile_client import ShowfileNotConfigured, ShowfileSyncError, sync_playlist
 from crate_builder.version import get_version
+from crate_builder.yearcheck_runner import YearCheckError
+from crate_builder import yearcheck_runner, yearcheck_store
 from crate_builder.spotify_client import (
     SpotifyLoginExpired,
     SpotifyNotConfigured,
@@ -153,7 +156,11 @@ def community_page():
 
 @app.route("/library")
 def library_page():
-    return render_template("library.html", default_library_dir=serato_paths.guess_music_dir())
+    return render_template(
+        "library.html",
+        default_library_dir=serato_paths.guess_music_dir(),
+        default_serato_dir=serato_paths.guess_serato_dir(),
+    )
 
 
 @app.route("/myevents")
@@ -359,28 +366,73 @@ def api_search():
 
 @app.route("/api/duplicates", methods=["POST"])
 def api_duplicates():
+    # Sourced from Serato's own database V2 file rather than a folder scan —
+    # it's exactly what Serato itself sees, needs no separate library
+    # folder, and carries Serato-specific fields (MIK energy, key, grouping,
+    # pool/source label) a plain tag scan can't get at all.
     data = request.get_json(force=True)
-    library_dir = data.get("library_dir", "").strip()
-    if not library_dir:
-        return jsonify(error="library_dir is required"), 400
+    serato_dir = data.get("serato_dir", "").strip()
+    if not serato_dir:
+        return jsonify(error="serato_dir is required"), 400
     try:
-        library_tracks = _get_library(library_dir)
-    except NotADirectoryError as exc:
+        tracks = parse_database(serato_paths.database_v2_path(os.path.expanduser(serato_dir)))
+    except SeratoDatabaseError as exc:
         return jsonify(error=str(exc)), 400
 
-    groups = find_duplicates(library_tracks)
+    groups = find_duplicates(tracks)
     return jsonify(
         groups=[
             {
                 "reason": g.reason,
                 "tracks": [
-                    {"path": t.path, "artist": t.artist, "title": t.title, "album": t.album}
+                    {
+                        "path": t.path,
+                        "artist": t.artist,
+                        "title": t.title,
+                        "album": t.album,
+                        "year": t.year,
+                        "key": t.key,
+                        "energy": t.energy,
+                        "source": t.source,
+                        "bpm": t.bpm,
+                    }
                     for t in g.tracks
                 ],
             }
             for g in groups
         ]
     )
+
+
+@app.route("/api/yearcheck/start", methods=["POST"])
+def api_yearcheck_start():
+    data = request.get_json(force=True)
+    serato_dir = data.get("serato_dir", "").strip()
+    limit = data.get("limit")
+    if not serato_dir:
+        return jsonify(error="serato_dir is required"), 400
+    db_path = serato_paths.database_v2_path(os.path.expanduser(serato_dir))
+    try:
+        yearcheck_runner.start(db_path, limit=int(limit) if limit else None)
+    except (YearCheckError, SeratoDatabaseError) as exc:
+        return jsonify(error=str(exc)), 400
+    return jsonify(ok=True)
+
+
+@app.route("/api/yearcheck/status", methods=["GET"])
+def api_yearcheck_status():
+    return jsonify(**yearcheck_runner.get_status())
+
+
+@app.route("/api/yearcheck/results", methods=["GET"])
+def api_yearcheck_results():
+    return jsonify(results=yearcheck_store.get_cached_results())
+
+
+@app.route("/api/yearcheck/stop", methods=["POST"])
+def api_yearcheck_stop():
+    yearcheck_runner.stop()
+    return jsonify(ok=True)
 
 
 @app.route("/api/metadata", methods=["GET"])

@@ -49,12 +49,27 @@ does the cross-referencing.
 Housekeeping for your local library, separate from matching/building a
 crate:
 
-- **Duplicate finder** — scans your library for tracks that look like the
+- **Duplicate finder** — reads Serato's own database file directly (the
+  `database V2` file inside your `_Serato_` folder), not a rescan of your
+  music folder, so it's exactly what Serato itself sees and needs no
+  separate library folder for this part. Groups tracks that look like the
   same song: exact matches after normalizing case/punctuation/noise words,
   plus close variants (like a missing featured-artist credit) that share
   the same title. It only *finds* duplicates and shows you each file's
-  path — nothing gets deleted automatically. Remove files yourself in
-  Finder/Explorer once you've reviewed a group.
+  path plus its year/key/energy/pool-source — nothing gets deleted
+  automatically. Remove files yourself in Finder/Explorer once you've
+  reviewed a group.
+- **Year check** — cross-checks each track's tagged year against
+  MusicBrainz, since Serato's own year tags aren't always reliable. This is
+  a review tool, not an auto-corrector — nothing gets written back on its
+  own; a flagged mismatch gets a button that jumps straight into the
+  Metadata Editor (below) to fix it by hand, backup included. Results are
+  cached locally (`~/.crate_builder/year_check_results.json`), so
+  already-checked tracks are skipped on the next run — stop partway
+  through a big library and pick back up later, even across an app
+  restart, instead of starting over. Runs at MusicBrainz's real rate limit
+  (1 request/second), so a full library can take a while; the "Check up to
+  N tracks" field lets you do it in batches.
 - **Metadata editor** — search your library, pick a track, and edit its
   title/artist/album/genre/year/track number. This is the one part of
   crate-builder that changes your actual music files rather than only

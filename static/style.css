@@ -132,6 +132,30 @@ button.secondary {
 
 .hidden { display: none; }
 
+label.inline {
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-right: 0.5rem;
+}
+
+.progress-wrap {
+  background: #0f1115;
+  border-radius: 6px;
+  height: 6px;
+  overflow: hidden;
+  margin: 0.6rem 0;
+}
+
+.progress-bar {
+  background: var(--accent);
+  height: 100%;
+  width: 0%;
+  transition: width 0.2s;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

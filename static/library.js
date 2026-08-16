@@ -15,12 +15,16 @@ function libraryDir() {
   return $("library_dir").value.trim();
 }
 
+function seratoDir() {
+  return $("serato_dir").value.trim();
+}
+
 // ---- Duplicate finder ----
 
 $("scan_dupes_btn").addEventListener("click", async () => {
-  const library_dir = libraryDir();
-  if (!library_dir) {
-    setStatus($("dupes_status"), "Set your music library folder first.", true);
+  const serato_dir = seratoDir();
+  if (!serato_dir) {
+    setStatus($("dupes_status"), "Set your Serato folder first.", true);
     return;
   }
   setStatus($("dupes_status"), "Scanning...");
@@ -29,7 +33,7 @@ $("scan_dupes_btn").addEventListener("click", async () => {
     const res = await fetch("/api/duplicates", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ library_dir }),
+      body: JSON.stringify({ serato_dir }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Scan failed");
@@ -42,6 +46,12 @@ $("scan_dupes_btn").addEventListener("click", async () => {
     setStatus($("dupes_status"), err.message, true);
   }
 });
+
+function trackAnnotation(t) {
+  const bits = [t.year || "no year", t.key || "no key", `energy ${t.energy ?? "—"}`];
+  if (t.source) bits.push(t.source);
+  return bits.join(" · ");
+}
 
 function renderDuplicateGroups(groups) {
   const container = $("dupes_results");
@@ -63,7 +73,7 @@ function renderDuplicateGroups(groups) {
 
     const list = document.createElement("div");
     list.className = "crate-tracks";
-    list.textContent = group.tracks.map((t) => t.path).join("\n");
+    list.textContent = group.tracks.map((t) => `${t.path}  [${trackAnnotation(t)}]`).join("\n");
     div.appendChild(list);
 
     container.appendChild(div);
@@ -194,3 +204,141 @@ async function loadBackups() {
 $("refresh_backups_btn").addEventListener("click", loadBackups);
 
 loadBackups();
+
+// ---- Year check ----
+
+let yearcheckPollHandle = null;
+let yearcheckResults = [];
+
+function statusBadge(status) {
+  if (status === "match") return `<span class="badge match">match</span>`;
+  if (status === "mismatch") return `<span class="badge mismatch">mismatch</span>`;
+  return `<span class="badge notfound">${escapeHtml(status)}</span>`;
+}
+
+function renderYearCheckResults() {
+  const container = $("yearcheck_results");
+  if (yearcheckResults.length === 0) {
+    container.innerHTML = "";
+    return;
+  }
+  let html = `<table><thead><tr>
+    <th>Artist</th><th>Title</th><th>Tag Year</th><th>MB Year</th><th>Score</th><th>Status</th><th></th><th></th>
+  </tr></thead><tbody>`;
+  yearcheckResults
+    .slice()
+    .sort((a, b) => (a.status === "mismatch" ? -1 : 1) - (b.status === "mismatch" ? -1 : 1))
+    .forEach((r) => {
+      const linkCell = r.mb_link ? `<a href="${r.mb_link}" target="_blank" style="color:var(--accent);">view</a>` : "";
+      const fixCell =
+        r.status === "mismatch"
+          ? `<button type="button" class="secondary" data-fix-path="${escapeHtml(r.path)}" data-fix-label="${escapeHtml(`${r.artist} – ${r.title}`)}">Fix in editor</button>`
+          : "";
+      html += `<tr>
+        <td>${escapeHtml(r.artist)}</td>
+        <td>${escapeHtml(r.title)}</td>
+        <td>${escapeHtml(r.tag_year || "—")}</td>
+        <td>${escapeHtml(r.mb_year || "—")}</td>
+        <td>${r.score != null ? r.score : "—"}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td>${linkCell}</td>
+        <td>${fixCell}</td>
+      </tr>`;
+    });
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+
+  container.querySelectorAll("[data-fix-path]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const path = btn.dataset.fixPath;
+      if (!path) {
+        setStatus($("yearcheck_status"), "No file path recorded for this track — can't jump to the editor.", true);
+        return;
+      }
+      loadTrackForEditing(path, btn.dataset.fixLabel);
+      $("metadata_edit_panel").scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  });
+}
+
+async function loadYearCheckResults() {
+  const res = await fetch("/api/yearcheck/results");
+  const data = await res.json();
+  yearcheckResults = data.results || [];
+  renderYearCheckResults();
+}
+
+function stopPollingYearCheck() {
+  if (yearcheckPollHandle) {
+    clearInterval(yearcheckPollHandle);
+    yearcheckPollHandle = null;
+  }
+}
+
+async function pollYearCheckStatus() {
+  const res = await fetch("/api/yearcheck/status");
+  const data = await res.json();
+
+  const running = data.status === "running";
+  $("yearcheck_start_btn").disabled = running;
+  $("yearcheck_stop_btn").disabled = !running;
+
+  const pct = data.total ? Math.round((data.checked / data.total) * 100) : 0;
+  $("yearcheck_progress").style.width = `${pct}%`;
+
+  if (running) {
+    setStatus($("yearcheck_status"), `Checking ${data.checked} / ${data.total}: ${data.current}`);
+  } else {
+    stopPollingYearCheck();
+    setStatus(
+      $("yearcheck_status"),
+      data.status === "stopped" ? `Stopped after ${data.checked} track(s).` : data.total ? `Done — checked ${data.checked} track(s).` : ""
+    );
+    loadYearCheckResults();
+  }
+}
+
+function startPollingYearCheck() {
+  if (yearcheckPollHandle) return;
+  pollYearCheckStatus();
+  yearcheckPollHandle = setInterval(pollYearCheckStatus, 1500);
+}
+
+$("yearcheck_start_btn").addEventListener("click", async () => {
+  const serato_dir = seratoDir();
+  if (!serato_dir) {
+    setStatus($("yearcheck_status"), "Set your Serato folder first.", true);
+    return;
+  }
+  const limit = parseInt($("yearcheck_limit").value, 10) || 25;
+  try {
+    const res = await fetch("/api/yearcheck/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ serato_dir, limit }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Couldn't start the check");
+    startPollingYearCheck();
+  } catch (err) {
+    setStatus($("yearcheck_status"), err.message, true);
+  }
+});
+
+$("yearcheck_stop_btn").addEventListener("click", async () => {
+  await fetch("/api/yearcheck/stop", { method: "POST" });
+});
+
+// A check might already be running from before this page load (it's a
+// server-side background job, not tied to any one browser tab) — pick up
+// live progress immediately instead of showing a blank/stale state.
+async function initYearCheck() {
+  await loadYearCheckResults();
+  const res = await fetch("/api/yearcheck/status");
+  const data = await res.json();
+  if (data.status === "running") {
+    startPollingYearCheck();
+  }
+}
+
+initYearCheck();

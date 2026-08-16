@@ -28,6 +28,12 @@
       <div class="field">
         <label for="library_dir">Music library folder</label>
         <input id="library_dir" type="text" value="{{ default_library_dir }}" />
+        <span class="status">Used by the Metadata Editor's search, below.</span>
+      </div>
+      <div class="field">
+        <label for="serato_dir">Serato folder</label>
+        <input id="serato_dir" type="text" value="{{ default_serato_dir }}" />
+        <span class="status">Used by Duplicate Finder and Year Check — the folder containing "database V2".</span>
       </div>
     </section>
 
@@ -37,8 +43,10 @@
         <button id="scan_dupes_btn" type="button">Scan for Duplicates</button>
       </div>
       <p class="subtitle">
-        Groups tracks that look like the same song — exact matches after
-        normalizing case/punctuation, plus close variants (like a missing
+        Reads Serato's own database directly — exactly what Serato itself
+        sees, no library folder needed for this part. Groups tracks that
+        look like the same song: exact matches after normalizing
+        case/punctuation, plus close variants (like a missing
         featured-artist credit) that share the same title. This only
         <em>finds</em> duplicates; nothing gets deleted automatically —
         review each group and remove files yourself in Finder/Explorer using
@@ -46,6 +54,33 @@
       </p>
       <span id="dupes_status" class="status"></span>
       <div id="dupes_results"></div>
+    </section>
+
+    <section class="panel">
+      <div class="results_header">
+        <h2>Year check</h2>
+        <div>
+          <label class="inline">Check up to
+            <input type="number" id="yearcheck_limit" value="25" min="1" style="width:70px;" />
+            tracks
+          </label>
+          <button id="yearcheck_start_btn" type="button">Run MusicBrainz Check</button>
+          <button id="yearcheck_stop_btn" type="button" class="secondary" disabled>Stop</button>
+        </div>
+      </div>
+      <p class="subtitle">
+        Cross-checks each track's tagged year against MusicBrainz. This is a
+        review tool, not an auto-corrector — nothing gets written back
+        automatically. Flagged tracks that don't match get a button to jump
+        straight into the Metadata Editor above to fix the year by hand
+        (with the usual automatic backup). Already-checked tracks are
+        skipped on future runs, so stopping partway through and running
+        again later — even after restarting the app — picks up where you
+        left off instead of starting over.
+      </p>
+      <div class="progress-wrap"><div class="progress-bar" id="yearcheck_progress"></div></div>
+      <span id="yearcheck_status" class="status"></span>
+      <div id="yearcheck_results"></div>
     </section>
 
     <section class="panel">
