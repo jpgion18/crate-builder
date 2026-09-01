@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from rapidfuzz import fuzz, process
 
@@ -11,6 +11,13 @@ from crate_builder.input_parser import InputTrack
 from crate_builder.library import Track
 
 DEFAULT_THRESHOLD = 75
+
+# How close (in WRatio points) a runner-up has to be to the top pick before
+# it's flagged as a real toss-up rather than just noise below the winner —
+# e.g. "Song (VIP Mix)" vs "Song (Club Mix)" both matching an input that just
+# says "Song". Below this margin, auto-picking the top score is fine.
+AMBIGUITY_MARGIN = 5
+CANDIDATE_LIMIT = 5
 
 _NOISE_PATTERN = re.compile(
     r"\((?:feat|ft|featuring|prod|radio edit|clean|explicit|official)[^)]*\)"
@@ -36,6 +43,12 @@ class MatchResult:
     track: Track | None
     score: float
     matched: bool
+    # Other library tracks that scored within AMBIGUITY_MARGIN of the top
+    # pick and also clear the threshold — e.g. multiple remixes of the same
+    # track. Only populated when `ambiguous` is True; empty otherwise so a
+    # clean single match doesn't carry the extra payload.
+    candidates: list[tuple[Track, float]] = field(default_factory=list)
+    ambiguous: bool = False
 
 
 def match_tracks(
@@ -47,7 +60,11 @@ def match_tracks(
 
     A result is `matched=True` when the best candidate's score clears
     `threshold`; otherwise the best guess is still returned (for manual
-    review) with `matched=False`.
+    review) with `matched=False`. When two or more candidates are both
+    genuine matches and close enough in score to be a toss-up (commonly
+    different remixes/edits of the same track), `ambiguous=True` and
+    `candidates` carries the close set for manual disambiguation instead of
+    silently auto-picking one.
     """
     if not library_tracks:
         return [MatchResult(input=t, track=None, score=0, matched=False) for t in input_tracks]
@@ -63,18 +80,28 @@ def match_tracks(
             results.append(MatchResult(input=inp, track=None, score=0, matched=False))
             continue
 
-        best = process.extractOne(query, choices, scorer=fuzz.WRatio)
-        if best is None:
+        top = process.extract(query, choices, scorer=fuzz.WRatio, limit=CANDIDATE_LIMIT)
+        if not top:
             results.append(MatchResult(input=inp, track=None, score=0, matched=False))
             continue
 
-        _, score, idx = best
+        _, best_score, best_idx = top[0]
+        matched = best_score >= threshold
+        close_matches = [
+            (library_tracks[idx], score)
+            for _, score, idx in top
+            if score >= threshold and best_score - score <= AMBIGUITY_MARGIN
+        ]
+        ambiguous = matched and len(close_matches) >= 2
+
         results.append(
             MatchResult(
                 input=inp,
-                track=library_tracks[idx],
-                score=score,
-                matched=score >= threshold,
+                track=library_tracks[best_idx],
+                score=best_score,
+                matched=matched,
+                candidates=close_matches if ambiguous else [],
+                ambiguous=ambiguous,
             )
         )
 

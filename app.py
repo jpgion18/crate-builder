@@ -27,7 +27,7 @@ from crate_builder.community_client import (
 )
 from crate_builder.duplicates import find_duplicates
 from crate_builder.input_parser import parse_input_text
-from crate_builder.library import scan_library
+from crate_builder.library import apply_serato_metadata, scan_library
 from crate_builder.matcher import DEFAULT_THRESHOLD, match_tracks, normalize
 from crate_builder.metadata_editor import (
     MetadataError,
@@ -70,9 +70,10 @@ app = Flask(
     static_folder=os.path.join(_BASE_DIR, "static"),
 )
 
-# Single-user local tool: an in-memory cache keyed by library directory is
-# enough to avoid re-scanning the whole library on every request.
-_LIBRARY_CACHE: dict[str, list] = {}
+# Single-user local tool: an in-memory cache keyed by (library directory,
+# Serato dir) is enough to avoid re-scanning the whole library on every
+# request.
+_LIBRARY_CACHE: dict[tuple[str, str], list] = {}
 
 # Pending "Log in with Showfile" attempts: state -> (code_verifier, redirect_uri).
 # In-memory is fine — single-user, single-process, and an entry only lives
@@ -80,12 +81,22 @@ _LIBRARY_CACHE: dict[str, list] = {}
 _SHOWFILE_AUTH_PENDING: dict[str, tuple[str, str]] = {}
 
 
-def _get_library(library_dir: str, rescan: bool = False):
+def _get_library(library_dir: str, serato_dir: str = "", rescan: bool = False):
     library_dir = os.path.expanduser(library_dir)
-    if rescan or library_dir not in _LIBRARY_CACHE:
+    serato_dir = os.path.expanduser(serato_dir) if serato_dir else ""
+    cache_key = (library_dir, serato_dir)
+    if rescan or cache_key not in _LIBRARY_CACHE:
         _LIBRARY_CACHE.clear()
-        _LIBRARY_CACHE[library_dir] = scan_library(library_dir)
-    return _LIBRARY_CACHE[library_dir]
+        tracks = scan_library(library_dir)
+        if serato_dir:
+            db_path = serato_paths.database_v2_path(serato_dir)
+            if os.path.isfile(db_path):
+                try:
+                    tracks = apply_serato_metadata(tracks, parse_database(db_path))
+                except SeratoDatabaseError:
+                    pass  # best-effort — fall back to the plain filesystem scan
+        _LIBRARY_CACHE[cache_key] = tracks
+    return _LIBRARY_CACHE[cache_key]
 
 
 def _resolve_input_tracks(input_text: str):
@@ -272,10 +283,11 @@ def api_spotify_status():
 def api_scan():
     data = request.get_json(force=True)
     library_dir = data.get("library_dir", "").strip()
+    serato_dir = data.get("serato_dir", "").strip()
     if not library_dir:
         return jsonify(error="library_dir is required"), 400
     try:
-        tracks = _get_library(library_dir, rescan=True)
+        tracks = _get_library(library_dir, serato_dir, rescan=True)
     except NotADirectoryError as exc:
         return jsonify(error=str(exc)), 400
     return jsonify(track_count=len(tracks))
@@ -285,6 +297,7 @@ def api_scan():
 def api_preview():
     data = request.get_json(force=True)
     library_dir = data.get("library_dir", "").strip()
+    serato_dir = data.get("serato_dir", "").strip()
     input_text = data.get("input_text", "")
     threshold = int(data.get("threshold", DEFAULT_THRESHOLD))
 
@@ -294,7 +307,7 @@ def api_preview():
         return jsonify(error="Paste a CSV, Spotify playlist URL, or track list first"), 400
 
     try:
-        library_tracks = _get_library(library_dir)
+        library_tracks = _get_library(library_dir, serato_dir)
     except NotADirectoryError as exc:
         return jsonify(error=str(exc)), 400
 
@@ -307,6 +320,9 @@ def api_preview():
 
     results = match_tracks(input_tracks, library_tracks, threshold=threshold)
 
+    def _track_json(track):
+        return {"path": track.path, "artist": track.artist, "title": track.title, "album": track.album}
+
     matches = [
         {
             "raw": r.input.raw,
@@ -314,16 +330,9 @@ def api_preview():
             "input_title": r.input.title,
             "matched": r.matched,
             "score": round(r.score, 1),
-            "track": (
-                {
-                    "path": r.track.path,
-                    "artist": r.track.artist,
-                    "title": r.track.title,
-                    "album": r.track.album,
-                }
-                if r.track
-                else None
-            ),
+            "ambiguous": r.ambiguous,
+            "track": _track_json(r.track) if r.track else None,
+            "candidates": [{**_track_json(t), "score": round(score, 1)} for t, score in r.candidates],
         }
         for r in results
     ]
@@ -342,12 +351,13 @@ def api_search():
     from rapidfuzz import fuzz, process
 
     library_dir = request.args.get("library_dir", "").strip()
+    serato_dir = request.args.get("serato_dir", "").strip()
     query = request.args.get("q", "").strip()
     if not library_dir or not query:
         return jsonify(results=[])
 
     try:
-        library_tracks = _get_library(library_dir)
+        library_tracks = _get_library(library_dir, serato_dir)
     except NotADirectoryError as exc:
         return jsonify(error=str(exc)), 400
 
