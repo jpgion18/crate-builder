@@ -95,9 +95,10 @@ async function postJSON(url, body) {
 
 $("scan_btn").addEventListener("click", async () => {
   const library_dir = $("library_dir").value.trim();
+  const serato_dir = $("serato_dir").value.trim();
   setStatus($("scan_status"), "Scanning...");
   try {
-    const data = await postJSON("/api/scan", { library_dir });
+    const data = await postJSON("/api/scan", { library_dir, serato_dir });
     setStatus($("scan_status"), `Found ${data.track_count} tracks.`);
   } catch (err) {
     setStatus($("scan_status"), err.message, true);
@@ -106,13 +107,14 @@ $("scan_btn").addEventListener("click", async () => {
 
 $("preview_btn").addEventListener("click", async () => {
   const library_dir = $("library_dir").value.trim();
+  const serato_dir = $("serato_dir").value.trim();
   const input_text = $("input_text").value;
   const threshold = Number(thresholdInput.value);
 
   setStatus($("preview_status"), "Matching...");
   $("build_status").textContent = "";
   try {
-    const data = await postJSON("/api/preview", { library_dir, input_text, threshold });
+    const data = await postJSON("/api/preview", { library_dir, serato_dir, input_text, threshold });
     lastMatches = data.matches;
     renderResults(data);
     setStatus(
@@ -136,6 +138,7 @@ function renderResults(data) {
   data.matches.forEach((m, i) => {
     const tr = document.createElement("tr");
     if (!m.matched) tr.classList.add("unmatched");
+    if (m.ambiguous) tr.classList.add("ambiguous");
 
     const checkboxTd = document.createElement("td");
     const checkbox = document.createElement("input");
@@ -151,7 +154,7 @@ function renderResults(data) {
 
     const matchTd = document.createElement("td");
     matchTd.dataset.role = "match-cell";
-    renderMatchCell(matchTd, m.track);
+    renderMatchCell(matchTd, m, i);
     tr.appendChild(matchTd);
 
     const scoreTd = document.createElement("td");
@@ -172,11 +175,37 @@ function renderResults(data) {
   });
 }
 
-function renderMatchCell(td, track) {
+function renderMatchCell(td, m, index) {
+  const track = m.track;
   if (!track) {
     td.innerHTML = `<span class="track-sub">no match found</span>`;
     return;
   }
+
+  if (m.ambiguous && m.candidates && m.candidates.length > 1) {
+    td.innerHTML = "";
+    const select = document.createElement("select");
+    select.className = "ambiguous-select";
+    m.candidates.forEach((c, ci) => {
+      const opt = document.createElement("option");
+      opt.value = ci;
+      opt.textContent = `${c.title} — ${c.artist} (${c.score})`;
+      if (c.path === track.path) opt.selected = true;
+      select.appendChild(opt);
+    });
+    select.addEventListener("change", () => {
+      const chosen = lastMatches[index].candidates[Number(select.value)];
+      lastMatches[index].track = { path: chosen.path, artist: chosen.artist, title: chosen.title, album: chosen.album };
+      renderMatchCell(td, lastMatches[index], index);
+    });
+    td.appendChild(select);
+    const hint = document.createElement("span");
+    hint.className = "track-sub";
+    hint.textContent = "multiple close matches — verify";
+    td.appendChild(hint);
+    return;
+  }
+
   td.innerHTML = `<span class="track-line">${escapeHtml(track.title)}</span><span class="track-sub">${escapeHtml(track.artist)} — ${escapeHtml(track.path)}</span>`;
 }
 
@@ -201,10 +230,11 @@ async function showManualSearch(actionTd, index, matchObj) {
 
   const runSearch = async () => {
     const library_dir = $("library_dir").value.trim();
+    const serato_dir = $("serato_dir").value.trim();
     const q = input.value.trim();
     if (!q) return;
     const res = await fetch(
-      `/api/search?library_dir=${encodeURIComponent(library_dir)}&q=${encodeURIComponent(q)}`
+      `/api/search?library_dir=${encodeURIComponent(library_dir)}&serato_dir=${encodeURIComponent(serato_dir)}&q=${encodeURIComponent(q)}`
     );
     const data = await res.json();
     resultsDiv.innerHTML = "";
@@ -215,10 +245,12 @@ async function showManualSearch(actionTd, index, matchObj) {
       div.addEventListener("click", () => {
         lastMatches[index].track = { path: r.path, artist: r.artist, title: r.title, album: "" };
         lastMatches[index].matched = true;
+        lastMatches[index].ambiguous = false;
+        lastMatches[index].candidates = [];
         const row = actionTd.closest("tr");
         row.classList.remove("unmatched");
         row.querySelector('input[type="checkbox"]').checked = true;
-        renderMatchCell(row.querySelector('[data-role="match-cell"]'), lastMatches[index].track);
+        renderMatchCell(row.querySelector('[data-role="match-cell"]'), lastMatches[index], index);
         box.remove();
         resultsDiv.remove();
       });

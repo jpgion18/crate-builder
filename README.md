@@ -13,14 +13,22 @@ you use that input method).
 
 1. **Scan** — recursively walks a music folder and reads ID3/tag metadata
    (title/artist/album) via `mutagen`, falling back to parsing the filename
-   when tags are missing.
+   when tags are missing. If a Serato `_Serato_` folder is also set, its
+   `database V2` metadata is overlaid on top of the scan — Serato's own
+   title/artist/album is usually more accurate than raw file tags (it's what
+   you actually see and edit in Serato, and edits there don't always get
+   written back to the file), so it wins wherever it has a value.
 2. **Parse input** — auto-detects whether your pasted text is a Spotify
    playlist URL, a CSV (with or without a header row), or a plain
    `Artist - Title` list.
 3. **Match** — fuzzy-matches each input track against your library using
    `rapidfuzz`, stripping noise like "(Official Audio)" / "feat. ..." before
    scoring. Anything below the match threshold is flagged for manual review
-   with a "Find match" search box instead of being silently dropped.
+   with a "Find match" search box instead of being silently dropped. When two
+   or more library tracks are both genuine matches and too close in score to
+   call — commonly different remixes/edits of the same track — the row is
+   flagged "ambiguous" with a dropdown of the close candidates so you confirm
+   which one instead of it silently picking one for you.
 4. **Build** — writes a new `.crate` file into your Serato
    `_Serato_/Subcrates` folder, so it shows up as a new crate next time you
    open Serato.
