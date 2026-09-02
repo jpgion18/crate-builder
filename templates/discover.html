@@ -143,6 +143,10 @@
     </section>
   </main>
 
+  <!-- File downloads (Discovery Log export) target this instead of the
+       top-level window — see index.html's copy of this iframe for why. -->
+  <iframe name="download_frame" style="display: none;"></iframe>
+
   <script src="{{ url_for('static', filename='handoff.js') }}"></script>
   <script src="{{ url_for('static', filename='discover.js') }}"></script>
 </body>

@@ -229,7 +229,12 @@ $("export_btn").addEventListener("click", () => {
     setStatus($("log_status"), "Discovery log is empty.", true);
     return;
   }
-  window.location.href = "/api/discover/export";
+  // Loaded into the hidden "download_frame" iframe rather than navigating
+  // the page itself — a top-level window.location.href here would leave
+  // no way back to the log/Sources state if the packaged app's webview
+  // doesn't treat the CSV response as a download. See app.js's
+  // downloadMissingLog() for the same reasoning.
+  document.getElementById("download_frame").src = "/api/discover/export";
 });
 
 $("log_select_all").addEventListener("change", () => {
