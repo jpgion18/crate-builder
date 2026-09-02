@@ -1,13 +1,15 @@
 # Crate Builder
 
 A free, local alternative to services like cratehackers.com: paste a CSV, a
-Spotify playlist URL, or a plain track list, and it fuzzy-matches those
-tracks against your local music library and writes a new Serato crate.
+Spotify playlist URL, a Dropbox/Google Drive share link, or a plain track
+list, and it fuzzy-matches those tracks against your local music library and
+writes a new Serato crate.
 
 Everything runs on your own machine — your music files, your Serato
 database, and the matching all stay local. Nothing is uploaded anywhere
-except the one Spotify API call needed to read a playlist's track list (if
-you use that input method).
+except the one API call needed to read a playlist or shared file's contents
+(Spotify, or a Dropbox/Google Drive share link), if you use one of those
+input methods.
 
 ## How it works
 
@@ -19,8 +21,13 @@ you use that input method).
    you actually see and edit in Serato, and edits there don't always get
    written back to the file), so it wins wherever it has a value.
 2. **Parse input** — auto-detects whether your pasted text is a Spotify
-   playlist URL, a CSV (with or without a header row), or a plain
-   `Artist - Title` list.
+   playlist URL, a Dropbox/Google Drive/Docs/Sheets share link, a CSV (with
+   or without a header row), or a plain `Artist - Title` list. A share link
+   is only followed if it's public ("Anyone with the link") — no Dropbox or
+   Google login involved, same as opening it in an incognito tab. A Google
+   Doc is read as plain text and a Google Sheet as CSV; an uploaded Dropbox
+   or Drive file needs to actually be a `.txt`/`.csv` (not a `.docx`/`.pdf`
+   or other binary format).
 3. **Match** — fuzzy-matches each input track against your library using
    `rapidfuzz`, stripping noise like "(Official Audio)" / "feat. ..." before
    scoring. Anything below the match threshold is flagged for manual review

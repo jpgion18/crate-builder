@@ -28,6 +28,7 @@ from crate_builder.community_client import (
 from crate_builder.duplicates import find_duplicates
 from crate_builder.input_parser import parse_input_text
 from crate_builder.library import apply_serato_metadata, scan_library
+from crate_builder.link_fetcher import LinkFetchError, fetch_tracklist_text, is_shared_link
 from crate_builder.matcher import DEFAULT_THRESHOLD, match_tracks, normalize
 from crate_builder.metadata_editor import (
     MetadataError,
@@ -103,6 +104,8 @@ def _resolve_input_tracks(input_text: str):
     input_text = input_text.strip()
     if is_spotify_url(input_text):
         return fetch_playlist_tracks(input_text)
+    if is_shared_link(input_text):
+        return parse_input_text(fetch_tracklist_text(input_text))
     return parse_input_text(input_text)
 
 
@@ -110,6 +113,8 @@ def _resolve_input_tracks_safe(input_text: str):
     """Returns (tracks, None) on success, or (None, (message, status)) on a handled error."""
     try:
         return _resolve_input_tracks(input_text), None
+    except LinkFetchError as exc:
+        return None, (str(exc), 400)
     except (SpotifyNotConfigured, SpotifyNotConnected) as exc:
         return None, (str(exc), 400)
     except SpotifyException as exc:
