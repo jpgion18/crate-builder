@@ -352,13 +352,15 @@ function downloadMissingLog() {
   // response's Content-Disposition: attachment header triggers a genuine
   // browser/webview-native download. The packaged desktop app's embedded
   // webview doesn't reliably handle a blob: URL clicked via JS — it just
-  // displays the raw CSV in place instead of downloading it, with no way
-  // back. Same reasoning as Discover's "Download Log" button, which
-  // already uses a real navigation (a GET, since it needs no request body)
-  // and works correctly.
+  // displays the raw CSV in place instead of downloading it. Submitting
+  // into the hidden "download_frame" iframe (rather than the top-level
+  // window) keeps that navigation contained there too, so even a webview
+  // that renders the CSV instead of downloading it does so off-screen —
+  // the main page, your matches, and your selections never move.
   const form = document.createElement("form");
   form.method = "POST";
   form.action = "/api/missing-log";
+  form.target = "download_frame";
   form.style.display = "none";
 
   const input = document.createElement("input");
