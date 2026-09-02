@@ -27,8 +27,12 @@ you use that input method).
    with a "Find match" search box instead of being silently dropped. When two
    or more library tracks are both genuine matches and too close in score to
    call — commonly different remixes/edits of the same track — the row is
-   flagged "ambiguous" with a dropdown of the close candidates so you confirm
-   which one instead of it silently picking one for you.
+   flagged "ambiguous" and lists the close candidates so you confirm which
+   one instead of it silently picking one for you. Every listed track (a
+   confirmed match, a "Find match" search result, or an ambiguous candidate)
+   has a ▶ button that loads it into a preview player docked at the bottom of
+   the page, so you can actually listen before committing — especially useful
+   for telling remixes apart by ear.
 4. **Build** — writes a new `.crate` file into your Serato
    `_Serato_/Subcrates` folder, so it shows up as a new crate next time you
    open Serato.

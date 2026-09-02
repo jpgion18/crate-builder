@@ -15,7 +15,7 @@ import webbrowser
 from urllib.parse import urlencode
 
 from dotenv import load_dotenv
-from flask import Flask, Response, jsonify, redirect, request, render_template
+from flask import Flask, Response, jsonify, redirect, request, render_template, send_file
 
 from crate_builder import discover_sources, discovery_store, local_config, pending_store, serato_crate, serato_paths
 from crate_builder.community_client import (
@@ -373,6 +373,48 @@ def api_search():
         for _, score, idx in top
     ]
     return jsonify(results=results)
+
+
+# Native <audio> mimetypes for the formats scan_library() indexes. Anything
+# not in here (currently just .alac, which shares .m4a's container but isn't
+# universally sniffed the same way) falls back to octet-stream — the browser
+# then decides whether it can play it at all.
+_AUDIO_MIME_TYPES = {
+    ".mp3": "audio/mpeg",
+    ".m4a": "audio/mp4",
+    ".flac": "audio/flac",
+    ".wav": "audio/wav",
+    ".aiff": "audio/aiff",
+    ".aif": "audio/aiff",
+    ".ogg": "audio/ogg",
+}
+
+
+@app.route("/api/audio")
+def api_audio():
+    """Streams a single track's audio for in-app preview. Only serves a path
+    that's actually in the current library scan — this is a local,
+    single-user tool with no auth on any route, so this is a deliberate
+    guard against turning a query param into an arbitrary-file-read."""
+    library_dir = request.args.get("library_dir", "").strip()
+    serato_dir = request.args.get("serato_dir", "").strip()
+    path = request.args.get("path", "").strip()
+    if not path:
+        return jsonify(error="path is required"), 400
+
+    try:
+        library_tracks = _get_library(library_dir, serato_dir)
+    except NotADirectoryError as exc:
+        return jsonify(error=str(exc)), 400
+
+    valid_paths = {os.path.normcase(os.path.normpath(t.path)) for t in library_tracks}
+    if os.path.normcase(os.path.normpath(path)) not in valid_paths:
+        return jsonify(error="Not a track in the current library scan"), 404
+
+    mimetype = _AUDIO_MIME_TYPES.get(os.path.splitext(path)[1].lower(), "application/octet-stream")
+    # conditional=True (the default) is what makes this support HTTP Range
+    # requests, which is what lets <audio>'s native seek bar actually work.
+    return send_file(path, mimetype=mimetype, conditional=True)
 
 
 @app.route("/api/duplicates", methods=["POST"])
