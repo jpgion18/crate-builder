@@ -1,13 +1,15 @@
 # Crate Builder
 
 A free, local alternative to services like cratehackers.com: paste a CSV, a
-Spotify playlist URL, or a plain track list, and it fuzzy-matches those
-tracks against your local music library and writes a new Serato crate.
+Spotify playlist URL, a Dropbox/Google Drive share link, or a plain track
+list, and it fuzzy-matches those tracks against your local music library and
+writes a new Serato crate.
 
 Everything runs on your own machine — your music files, your Serato
 database, and the matching all stay local. Nothing is uploaded anywhere
-except the one Spotify API call needed to read a playlist's track list (if
-you use that input method).
+except the one API call needed to read a playlist or shared file's contents
+(Spotify, or a Dropbox/Google Drive share link), if you use one of those
+input methods.
 
 ## How it works
 
@@ -19,16 +21,25 @@ you use that input method).
    you actually see and edit in Serato, and edits there don't always get
    written back to the file), so it wins wherever it has a value.
 2. **Parse input** — auto-detects whether your pasted text is a Spotify
-   playlist URL, a CSV (with or without a header row), or a plain
-   `Artist - Title` list.
+   playlist URL, a Dropbox/Google Drive/Docs/Sheets share link, a CSV (with
+   or without a header row), or a plain `Artist - Title` list. A share link
+   is only followed if it's public ("Anyone with the link") — no Dropbox or
+   Google login involved, same as opening it in an incognito tab. A Google
+   Doc is read as plain text and a Google Sheet as CSV; an uploaded Dropbox
+   or Drive file needs to actually be a `.txt`/`.csv` (not a `.docx`/`.pdf`
+   or other binary format).
 3. **Match** — fuzzy-matches each input track against your library using
    `rapidfuzz`, stripping noise like "(Official Audio)" / "feat. ..." before
    scoring. Anything below the match threshold is flagged for manual review
    with a "Find match" search box instead of being silently dropped. When two
    or more library tracks are both genuine matches and too close in score to
    call — commonly different remixes/edits of the same track — the row is
-   flagged "ambiguous" with a dropdown of the close candidates so you confirm
-   which one instead of it silently picking one for you.
+   flagged "ambiguous" and lists the close candidates so you confirm which
+   one instead of it silently picking one for you. Every listed track (a
+   confirmed match, a "Find match" search result, or an ambiguous candidate)
+   has a ▶ button that loads it into a preview player docked at the bottom of
+   the page, so you can actually listen before committing — especially useful
+   for telling remixes apart by ear.
 4. **Build** — writes a new `.crate` file into your Serato
    `_Serato_/Subcrates` folder, so it shows up as a new crate next time you
    open Serato.

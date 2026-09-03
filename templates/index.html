@@ -49,8 +49,8 @@
       </div>
 
       <div class="field">
-        <label for="input_text">Paste CSV, Spotify playlist URL, or track list</label>
-        <textarea id="input_text" rows="10" placeholder="https://open.spotify.com/playlist/...&#10;or&#10;Artist - Title&#10;Artist - Title&#10;or a CSV with Title/Artist columns"></textarea>
+        <label for="input_text">Paste CSV, Spotify playlist URL, Dropbox/Google Drive share link, or track list</label>
+        <textarea id="input_text" rows="10" placeholder="https://open.spotify.com/playlist/...&#10;or a Dropbox / Google Drive / Docs / Sheets share link&#10;or&#10;Artist - Title&#10;Artist - Title&#10;or a CSV with Title/Artist columns"></textarea>
       </div>
 
       <div class="field">
@@ -104,6 +104,13 @@
       <span id="community_status" class="status" data-community-configured="{{ community_configured|lower }}">{% if not community_configured %}Connect Showfile in <a href="/settings" style="color: inherit;">Settings</a> to enable.{% endif %}</span>
     </section>
   </main>
+
+  <div id="preview_player_bar" class="preview-player hidden">
+    <button id="preview_close_btn" type="button" class="preview-close" title="Close">✕</button>
+    <span id="preview_label" class="preview-label"></span>
+    <audio id="preview_audio" controls></audio>
+    <span id="preview_player_status" class="status"></span>
+  </div>
 
   <!-- File downloads (missing-tracks log) target this instead of the top-level
        window, so a webview that can't handle Content-Disposition just renders

@@ -13,6 +13,45 @@ function setStatus(el, message, isError = false) {
   el.classList.toggle("error", isError);
 }
 
+const previewBar = $("preview_player_bar");
+const previewAudio = $("preview_audio");
+
+function playPreview(track) {
+  const library_dir = $("library_dir").value.trim();
+  const serato_dir = $("serato_dir").value.trim();
+  const url = `/api/audio?path=${encodeURIComponent(track.path)}&library_dir=${encodeURIComponent(library_dir)}&serato_dir=${encodeURIComponent(serato_dir)}`;
+
+  $("preview_label").textContent = `${track.title} — ${track.artist}`;
+  setStatus($("preview_player_status"), "");
+  previewAudio.src = url;
+  previewBar.classList.remove("hidden");
+  document.body.classList.add("has-preview-player");
+  previewAudio.play().catch(() => {
+    setStatus($("preview_player_status"), "Couldn't play this file — format may not be supported.", true);
+  });
+}
+
+function makePreviewButton(track) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "preview-btn";
+  btn.textContent = "▶";
+  btn.title = "Preview this track";
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    playPreview(track);
+  });
+  return btn;
+}
+
+$("preview_close_btn").addEventListener("click", () => {
+  previewAudio.pause();
+  previewAudio.removeAttribute("src");
+  previewAudio.load();
+  previewBar.classList.add("hidden");
+  document.body.classList.remove("has-preview-player");
+});
+
 async function refreshSpotifyStatus() {
   try {
     const res = await fetch("/api/spotify-status");
@@ -182,23 +221,31 @@ function renderMatchCell(td, m, index) {
     return;
   }
 
+  td.innerHTML = "";
+
   if (m.ambiguous && m.candidates && m.candidates.length > 1) {
-    td.innerHTML = "";
-    const select = document.createElement("select");
-    select.className = "ambiguous-select";
+    const list = document.createElement("div");
+    list.className = "candidate-list";
     m.candidates.forEach((c, ci) => {
-      const opt = document.createElement("option");
-      opt.value = ci;
-      opt.textContent = `${c.title} — ${c.artist} (${c.score})`;
-      if (c.path === track.path) opt.selected = true;
-      select.appendChild(opt);
+      const row = document.createElement("div");
+      row.className = "candidate-row";
+
+      const label = document.createElement("label");
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = `candidates_${index}`;
+      radio.checked = c.path === track.path;
+      radio.addEventListener("change", () => {
+        lastMatches[index].track = { path: c.path, artist: c.artist, title: c.title, album: c.album };
+      });
+      label.appendChild(radio);
+      label.appendChild(document.createTextNode(` ${c.title} — ${c.artist} (${c.score})`));
+      row.appendChild(label);
+      row.appendChild(makePreviewButton(c));
+
+      list.appendChild(row);
     });
-    select.addEventListener("change", () => {
-      const chosen = lastMatches[index].candidates[Number(select.value)];
-      lastMatches[index].track = { path: chosen.path, artist: chosen.artist, title: chosen.title, album: chosen.album };
-      renderMatchCell(td, lastMatches[index], index);
-    });
-    td.appendChild(select);
+    td.appendChild(list);
     const hint = document.createElement("span");
     hint.className = "track-sub";
     hint.textContent = "multiple close matches — verify";
@@ -206,7 +253,13 @@ function renderMatchCell(td, m, index) {
     return;
   }
 
-  td.innerHTML = `<span class="track-line">${escapeHtml(track.title)}</span><span class="track-sub">${escapeHtml(track.artist)} — ${escapeHtml(track.path)}</span>`;
+  const row = document.createElement("div");
+  row.className = "match-row";
+  const info = document.createElement("span");
+  info.innerHTML = `<span class="track-line">${escapeHtml(track.title)}</span><span class="track-sub">${escapeHtml(track.artist)} — ${escapeHtml(track.path)}</span>`;
+  row.appendChild(info);
+  row.appendChild(makePreviewButton(track));
+  td.appendChild(row);
 }
 
 async function showManualSearch(actionTd, index, matchObj) {
@@ -241,7 +294,14 @@ async function showManualSearch(actionTd, index, matchObj) {
     (data.results || []).forEach((r) => {
       const div = document.createElement("div");
       div.className = "manual-result";
-      div.textContent = `${r.title} — ${r.artist} (${r.score})`;
+      const label = document.createElement("span");
+      label.textContent = `${r.title} — ${r.artist} (${r.score})`;
+      div.appendChild(label);
+
+      const playBtn = makePreviewButton({ path: r.path, artist: r.artist, title: r.title });
+      playBtn.addEventListener("click", (e) => e.stopPropagation());
+      div.appendChild(playBtn);
+
       div.addEventListener("click", () => {
         lastMatches[index].track = { path: r.path, artist: r.artist, title: r.title, album: "" };
         lastMatches[index].matched = true;
