@@ -67,6 +67,14 @@ def main() -> None:
     _wait_until_up(port)
     start_background_polling()
 
+    # Off by default in pywebview — without it, a Content-Disposition:
+    # attachment response (the Missing Tracks Log, Discovery Log export)
+    # isn't recognized as a file to save at all; it's just silently
+    # dropped, regardless of what triggered the request. This is what
+    # turns it into a real native "Save File" dialog (defaulting to the
+    # Downloads folder) on both macOS and Windows.
+    webview.settings["ALLOW_DOWNLOADS"] = True
+
     webview.create_window("Crate Builder", f"http://{HOST}:{port}", width=1100, height=850, min_size=(800, 600))
     webview.start()
 
