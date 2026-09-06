@@ -248,6 +248,31 @@ tr.ambiguous td { background: rgba(230, 180, 60, 0.08); }
 
 .candidate-list { display: flex; flex-direction: column; gap: 0.2rem; }
 
+.extras-list { display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.3rem; }
+
+.extra-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.extra-row .track-sub { flex: 1; }
+
+.add-extra-btn {
+  display: block;
+  margin-top: 0.35rem;
+  padding: 0.1rem 0.4rem;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.add-extra-btn:hover { color: var(--text); border-color: var(--text); }
+
 .candidate-row {
   display: flex;
   align-items: center;
