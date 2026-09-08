@@ -215,18 +215,19 @@ function renderResults(data) {
 }
 
 function renderMatchCell(td, m, index) {
-  const track = m.track;
-  if (!track) {
-    td.innerHTML = `<span class="track-sub">no match found</span>`;
-    return;
-  }
-
   td.innerHTML = "";
+  m.extras = m.extras || [];
+  const track = m.track;
 
-  if (m.ambiguous && m.candidates && m.candidates.length > 1) {
+  if (!track) {
+    const noMatch = document.createElement("span");
+    noMatch.className = "track-sub";
+    noMatch.textContent = "no match found";
+    td.appendChild(noMatch);
+  } else if (m.ambiguous && m.candidates && m.candidates.length > 1) {
     const list = document.createElement("div");
     list.className = "candidate-list";
-    m.candidates.forEach((c, ci) => {
+    m.candidates.forEach((c) => {
       const row = document.createElement("div");
       row.className = "candidate-row";
 
@@ -250,36 +251,78 @@ function renderMatchCell(td, m, index) {
     hint.className = "track-sub";
     hint.textContent = "multiple close matches — verify";
     td.appendChild(hint);
-    return;
+  } else {
+    const row = document.createElement("div");
+    row.className = "match-row";
+    const info = document.createElement("span");
+    info.innerHTML = `<span class="track-line">${escapeHtml(track.title)}</span><span class="track-sub">${escapeHtml(track.artist)} — ${escapeHtml(track.path)}</span>`;
+    row.appendChild(info);
+    row.appendChild(makePreviewButton(track));
+    td.appendChild(row);
   }
 
-  const row = document.createElement("div");
-  row.className = "match-row";
-  const info = document.createElement("span");
-  info.innerHTML = `<span class="track-line">${escapeHtml(track.title)}</span><span class="track-sub">${escapeHtml(track.artist)} — ${escapeHtml(track.path)}</span>`;
-  row.appendChild(info);
-  row.appendChild(makePreviewButton(track));
-  td.appendChild(row);
+  if (m.extras.length > 0) {
+    const extrasList = document.createElement("div");
+    extrasList.className = "extras-list";
+    m.extras.forEach((extra, ei) => {
+      const row = document.createElement("div");
+      row.className = "extra-row";
+
+      const info = document.createElement("span");
+      info.className = "track-sub";
+      info.textContent = `+ ${extra.title} — ${extra.artist}`;
+      row.appendChild(info);
+      row.appendChild(makePreviewButton(extra));
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "preview-btn";
+      removeBtn.title = "Remove this extra track";
+      removeBtn.textContent = "✕";
+      removeBtn.addEventListener("click", () => {
+        lastMatches[index].extras.splice(ei, 1);
+        renderMatchCell(td, lastMatches[index], index);
+      });
+      row.appendChild(removeBtn);
+
+      extrasList.appendChild(row);
+    });
+    td.appendChild(extrasList);
+  }
+
+  // Lets the same input line add more than one library track to the crate
+  // — e.g. a Jump Off edit AND the Extended Version of the same song, to
+  // mix one into the other. Available regardless of match state, since two
+  // versions of a track don't always score close enough to trigger the
+  // "ambiguous" ties above.
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "add-extra-btn";
+  addBtn.textContent = "+ Add another version";
+  addBtn.addEventListener("click", () => showAddExtraSearch(td, index));
+  td.appendChild(addBtn);
 }
 
-async function showManualSearch(actionTd, index, matchObj) {
-  let box = actionTd.querySelector(".manual-search");
-  if (box) {
-    box.remove();
+function createSearchBox(container, defaultQuery, onSelect) {
+  const existing = container.querySelector(".manual-search");
+  if (existing) {
+    existing.remove();
+    container.querySelector(".manual-results")?.remove();
     return;
   }
-  box = document.createElement("div");
+
+  const box = document.createElement("div");
   box.className = "manual-search";
   const input = document.createElement("input");
   input.type = "text";
   input.placeholder = "search library...";
-  input.value = `${matchObj.input_artist} ${matchObj.input_title}`.trim();
+  input.value = defaultQuery;
   box.appendChild(input);
-  actionTd.appendChild(box);
+  container.appendChild(box);
 
   const resultsDiv = document.createElement("div");
   resultsDiv.className = "manual-results";
-  actionTd.appendChild(resultsDiv);
+  container.appendChild(resultsDiv);
 
   const runSearch = async () => {
     const library_dir = $("library_dir").value.trim();
@@ -303,14 +346,7 @@ async function showManualSearch(actionTd, index, matchObj) {
       div.appendChild(playBtn);
 
       div.addEventListener("click", () => {
-        lastMatches[index].track = { path: r.path, artist: r.artist, title: r.title, album: "" };
-        lastMatches[index].matched = true;
-        lastMatches[index].ambiguous = false;
-        lastMatches[index].candidates = [];
-        const row = actionTd.closest("tr");
-        row.classList.remove("unmatched");
-        row.querySelector('input[type="checkbox"]').checked = true;
-        renderMatchCell(row.querySelector('[data-role="match-cell"]'), lastMatches[index], index);
+        onSelect({ path: r.path, artist: r.artist, title: r.title, album: "" });
         box.remove();
         resultsDiv.remove();
       });
@@ -324,6 +360,27 @@ async function showManualSearch(actionTd, index, matchObj) {
   runSearch();
 }
 
+function showManualSearch(actionTd, index, matchObj) {
+  createSearchBox(actionTd, `${matchObj.input_artist} ${matchObj.input_title}`.trim(), (track) => {
+    lastMatches[index].track = track;
+    lastMatches[index].matched = true;
+    lastMatches[index].ambiguous = false;
+    lastMatches[index].candidates = [];
+    const row = actionTd.closest("tr");
+    row.classList.remove("unmatched");
+    row.querySelector('input[type="checkbox"]').checked = true;
+    renderMatchCell(row.querySelector('[data-role="match-cell"]'), lastMatches[index], index);
+  });
+}
+
+function showAddExtraSearch(matchTd, index) {
+  const m = lastMatches[index];
+  createSearchBox(matchTd, `${m.input_artist} ${m.input_title}`.trim(), (track) => {
+    lastMatches[index].extras.push(track);
+    renderMatchCell(matchTd, lastMatches[index], index);
+  });
+}
+
 function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str || "";
@@ -334,10 +391,12 @@ function selectedMatchedTracks() {
   const checkboxes = document.querySelectorAll('#results_table input[type="checkbox"]');
   const tracks = [];
   checkboxes.forEach((cb) => {
-    if (cb.checked) {
-      const m = lastMatches[Number(cb.dataset.index)];
-      if (m.track) tracks.push(m.track);
-    }
+    const m = lastMatches[Number(cb.dataset.index)];
+    if (cb.checked && m.track) tracks.push(m.track);
+    // Extra versions (e.g. a Jump Off edit alongside the Extended Version)
+    // were explicitly added by the user via "+ Add another version", so
+    // they're included regardless of the row's own checkbox state.
+    if (m.extras && m.extras.length) tracks.push(...m.extras);
   });
   return tracks;
 }
@@ -437,6 +496,70 @@ function downloadMissingLog() {
 }
 
 $("missing_log_btn").addEventListener("click", downloadMissingLog);
+
+const SPOTIFY_PLAYLIST_URL_PATTERN = /open\.spotify\.com\/playlist\/[a-zA-Z0-9]+|spotify:playlist:[a-zA-Z0-9]+/;
+
+$("year_genre_btn").addEventListener("click", async () => {
+  const input_text = $("input_text").value.trim();
+  if (!SPOTIFY_PLAYLIST_URL_PATTERN.test(input_text)) {
+    setStatus($("year_genre_status"), "Paste a Spotify playlist URL first — year/genre data only comes from Spotify.", true);
+    return;
+  }
+
+  // Genre means one Spotify API call per unique artist in the playlist —
+  // slow enough for a big playlist that this is worth its own status
+  // message rather than looking hung.
+  setStatus($("year_genre_status"), "Fetching from Spotify — checking every artist individually, can take a bit for a big playlist...");
+  try {
+    const data = await postJSON("/api/spotify/year-genre", { input_text });
+    setStatus($("year_genre_status"), `Fetched ${data.count} track(s). Downloading...`);
+    renderYearGenreBreakdown(data.breakdown);
+    downloadYearGenreCsv(data.tracks);
+  } catch (err) {
+    setStatus($("year_genre_status"), err.message, true);
+  }
+});
+
+function renderYearGenreBreakdown(breakdown) {
+  $("year_genre_summary_panel").classList.remove("hidden");
+
+  const decadeList = $("year_genre_by_decade");
+  decadeList.innerHTML = "";
+  breakdown.by_decade.forEach(([label, count]) => {
+    const li = document.createElement("li");
+    li.textContent = `${label}: ${count}`;
+    decadeList.appendChild(li);
+  });
+
+  const genreList = $("year_genre_by_genre");
+  genreList.innerHTML = "";
+  breakdown.by_genre.forEach(([label, count]) => {
+    const li = document.createElement("li");
+    li.textContent = `${label}: ${count}`;
+    genreList.appendChild(li);
+  });
+}
+
+function downloadYearGenreCsv(tracks) {
+  // Same hidden-iframe <form> POST pattern as downloadMissingLog() above —
+  // the data's already fetched, this step just turns it into a real
+  // native file download without navigating the main page.
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = "/api/spotify/year-genre-log";
+  form.target = "download_frame";
+  form.style.display = "none";
+
+  const input = document.createElement("input");
+  input.type = "hidden";
+  input.name = "tracks_json";
+  input.value = JSON.stringify(tracks);
+  form.appendChild(input);
+
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+}
 
 $("sync_showfile_btn").addEventListener("click", async () => {
   const event_code = $("showfile_code").value.trim();

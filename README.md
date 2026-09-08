@@ -39,10 +39,31 @@ input methods.
    confirmed match, a "Find match" search result, or an ambiguous candidate)
    has a ▶ button that loads it into a preview player docked at the bottom of
    the page, so you can actually listen before committing — especially useful
-   for telling remixes apart by ear.
+   for telling remixes apart by ear. Matching isn't strictly 1:1, either — a
+   "+ Add another version" button on every row lets one input line add more
+   than one library track to the crate (e.g. a Jump Off edit alongside the
+   Extended Version of the same song, to mix one into the other).
 4. **Build** — writes a new `.crate` file into your Serato
    `_Serato_/Subcrates` folder, so it shows up as a new crate next time you
    open Serato.
+
+### Year/Genre Breakdown
+
+When the pasted input is a Spotify playlist URL, a "Get Year/Genre
+Breakdown (CSV)" button pulls each track's release year and genre,
+downloads a per-track CSV, and shows an on-page summary — how many tracks
+fall into each decade and each genre — so you can eyeball what era/genre
+a client's playlist actually leans toward (e.g. a bride's requests)
+without opening a spreadsheet, before deciding what else from your own
+library fits alongside the must-plays. A track missing year/genre data
+counts toward an explicit "Unknown" bucket rather than being silently
+dropped, and a track with more than one genre tag (an artist can have
+several) counts toward each of them. Year comes free with the normal
+playlist fetch; genre only exists at the *artist* level in Spotify's API
+(never per-track), so this makes one extra API call per unique artist in
+the playlist — for a big playlist that can take a few seconds, and a
+lookup failing for one artist just leaves that artist's tracks with an
+empty genre rather than failing the whole export.
 
 ## Discover tab
 
