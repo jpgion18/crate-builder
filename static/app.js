@@ -513,11 +513,32 @@ $("year_genre_btn").addEventListener("click", async () => {
   try {
     const data = await postJSON("/api/spotify/year-genre", { input_text });
     setStatus($("year_genre_status"), `Fetched ${data.count} track(s). Downloading...`);
+    renderYearGenreBreakdown(data.breakdown);
     downloadYearGenreCsv(data.tracks);
   } catch (err) {
     setStatus($("year_genre_status"), err.message, true);
   }
 });
+
+function renderYearGenreBreakdown(breakdown) {
+  $("year_genre_summary_panel").classList.remove("hidden");
+
+  const decadeList = $("year_genre_by_decade");
+  decadeList.innerHTML = "";
+  breakdown.by_decade.forEach(([label, count]) => {
+    const li = document.createElement("li");
+    li.textContent = `${label}: ${count}`;
+    decadeList.appendChild(li);
+  });
+
+  const genreList = $("year_genre_by_genre");
+  genreList.innerHTML = "";
+  breakdown.by_genre.forEach(([label, count]) => {
+    const li = document.createElement("li");
+    li.textContent = `${label}: ${count}`;
+    genreList.appendChild(li);
+  });
+}
 
 function downloadYearGenreCsv(tracks) {
   // Same hidden-iframe <form> POST pattern as downloadMissingLog() above —

@@ -44,7 +44,7 @@ from crate_builder.showfile_auth import ShowfileAuthError, exchange_code, resolv
 from crate_builder.showfile_client import ShowfileNotConfigured, ShowfileSyncError, sync_playlist
 from crate_builder.update_checker import check_for_update
 from crate_builder.version import get_version
-from crate_builder.year_genre_log import build_year_genre_csv
+from crate_builder.year_genre_log import build_year_genre_csv, summarize_year_genre
 from crate_builder.yearcheck_runner import YearCheckError
 from crate_builder import yearcheck_runner, yearcheck_store
 from crate_builder.spotify_client import (
@@ -622,9 +622,11 @@ def api_spotify_year_genre():
             message = f"Spotify API error ({exc.http_status}): {exc.msg}"
         return jsonify(error=message), 400
 
+    track_dicts = [{"artist": t.artist, "title": t.title, "year": t.year, "genres": t.genres} for t in tracks]
     return jsonify(
-        tracks=[{"artist": t.artist, "title": t.title, "year": t.year, "genres": t.genres} for t in tracks],
+        tracks=track_dicts,
         count=len(tracks),
+        breakdown=summarize_year_genre(track_dicts),
     )
 
 

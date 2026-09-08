@@ -50,15 +50,20 @@ input methods.
 ### Year/Genre Breakdown
 
 When the pasted input is a Spotify playlist URL, a "Get Year/Genre
-Breakdown (CSV)" button pulls each track's release year and genre and
-downloads it as a CSV — useful for quantifying what era/genre a client's
-playlist actually leans toward (e.g. a bride's requests) before deciding
-what else from your own library fits alongside the must-plays. Year comes
-free with the normal playlist fetch; genre only exists at the *artist*
-level in Spotify's API (never per-track), so this makes one extra API call
-per unique artist in the playlist — for a big playlist that can take a
-few seconds, and a lookup failing for one artist just leaves that artist's
-tracks with an empty genre rather than failing the whole export.
+Breakdown (CSV)" button pulls each track's release year and genre,
+downloads a per-track CSV, and shows an on-page summary — how many tracks
+fall into each decade and each genre — so you can eyeball what era/genre
+a client's playlist actually leans toward (e.g. a bride's requests)
+without opening a spreadsheet, before deciding what else from your own
+library fits alongside the must-plays. A track missing year/genre data
+counts toward an explicit "Unknown" bucket rather than being silently
+dropped, and a track with more than one genre tag (an artist can have
+several) counts toward each of them. Year comes free with the normal
+playlist fetch; genre only exists at the *artist* level in Spotify's API
+(never per-track), so this makes one extra API call per unique artist in
+the playlist — for a big playlist that can take a few seconds, and a
+lookup failing for one artist just leaves that artist's tracks with an
+empty genre rather than failing the whole export.
 
 ## Discover tab
 

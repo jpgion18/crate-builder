@@ -1,4 +1,4 @@
-from crate_builder.year_genre_log import build_year_genre_csv
+from crate_builder.year_genre_log import build_year_genre_csv, summarize_year_genre
 
 
 def test_builds_csv_with_header_and_rows():
@@ -19,3 +19,48 @@ def test_handles_commas_in_fields_safely():
     lines = csv_text.strip().splitlines()
     assert '"Artist, Feat. Someone"' in lines[1]
     assert '"Song, Pt. 1"' in lines[1]
+
+
+def test_summarize_buckets_by_decade():
+    tracks = [
+        {"artist": "A", "title": "1", "year": "2015", "genres": ""},
+        {"artist": "B", "title": "2", "year": "2018", "genres": ""},
+        {"artist": "C", "title": "3", "year": "2021", "genres": ""},
+    ]
+    result = summarize_year_genre(tracks)
+    assert result["by_decade"] == [("2010s", 2), ("2020s", 1)]
+
+
+def test_summarize_splits_multi_genre_tracks_into_each_bucket():
+    # A track whose artist has multiple genre tags counts toward every one
+    # of them, not one combined bucket for the joined string.
+    tracks = [
+        {"artist": "A", "title": "1", "year": "2015", "genres": "pop, dance pop"},
+        {"artist": "B", "title": "2", "year": "2016", "genres": "pop"},
+    ]
+    result = summarize_year_genre(tracks)
+    assert dict(result["by_genre"]) == {"pop": 2, "dance pop": 1}
+
+
+def test_summarize_missing_year_or_genre_counts_as_unknown():
+    tracks = [
+        {"artist": "A", "title": "1", "year": "", "genres": ""},
+        {"artist": "B", "title": "2", "year": "not-a-year", "genres": ""},
+    ]
+    result = summarize_year_genre(tracks)
+    assert result["by_decade"] == [("Unknown", 2)]
+    assert result["by_genre"] == [("Unknown", 2)]
+
+
+def test_summarize_sorts_biggest_bucket_first_ties_alphabetical():
+    tracks = [
+        {"artist": "A", "title": "1", "year": "2015", "genres": "house"},
+        {"artist": "B", "title": "2", "year": "2016", "genres": "pop"},
+        {"artist": "C", "title": "3", "year": "2017", "genres": "pop"},
+    ]
+    result = summarize_year_genre(tracks)
+    assert result["by_genre"] == [("pop", 2), ("house", 1)]
+
+
+def test_summarize_empty_tracks_list():
+    assert summarize_year_genre([]) == {"by_decade": [], "by_genre": []}

@@ -333,6 +333,12 @@ body.has-preview-player main { padding-bottom: 4.5rem; }
   align-items: baseline;
 }
 
+.breakdown-columns { display: flex; gap: 2.5rem; flex-wrap: wrap; }
+.breakdown-columns > div { min-width: 180px; }
+.breakdown-columns h3 { margin: 0 0 0.4rem; color: var(--muted); font-size: 0.85rem; font-weight: 600; }
+.breakdown-columns ul { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; }
+.breakdown-columns li { padding: 0.2rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+
 .manual-search {
   margin-top: 0.35rem;
   display: flex;
