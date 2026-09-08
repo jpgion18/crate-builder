@@ -25,6 +25,7 @@ from __future__ import annotations
 import os
 import re
 import secrets
+from dataclasses import dataclass
 
 from crate_builder.input_parser import InputTrack
 
@@ -169,3 +170,65 @@ def fetch_playlist_tracks(playlist_url_or_id: str) -> list[InputTrack]:
         results = sp.next(results) if results.get("next") else None
 
     return tracks
+
+
+@dataclass
+class YearGenreTrack:
+    artist: str
+    title: str
+    year: str
+    genres: str
+
+
+def fetch_playlist_year_genre(playlist_url_or_id: str) -> list[YearGenreTrack]:
+    """Like fetch_playlist_tracks(), but also pulls each track's release
+    year and genre — for eyeballing what era/genre mix a client's playlist
+    is actually made of, not for matching against your library.
+
+    Year is free: it's already on the track's own album object. Genre
+    isn't — Spotify has never exposed a per-track genre, only a per-artist
+    one (GET /artists/{id} -> genres), so this makes one extra API call per
+    *unique* primary artist in the playlist. Spotify removed the batched
+    "Several Artists" lookup in its February 2026 API changes, so those
+    calls can't be combined; a lookup failing for one artist just leaves
+    that artist's tracks with an empty genre rather than failing the whole
+    export.
+    """
+    playlist_id = extract_playlist_id(playlist_url_or_id) or playlist_url_or_id.strip()
+    sp = _get_client()
+
+    rows: list[tuple[str, str, str, str | None]] = []
+    results = sp.playlist_items(playlist_id, additional_types=["track"])
+    while results:
+        for entry in results.get("items", []):
+            track = entry.get("item") or entry.get("track")
+            if not track:
+                continue
+            title = track.get("name") or ""
+            artists = track.get("artists") or []
+            artist_names = ", ".join(a["name"] for a in artists if a.get("name"))
+            primary_artist_id = artists[0].get("id") if artists else None
+            release_date = (track.get("album") or {}).get("release_date") or ""
+            year = release_date[:4] if release_date else ""
+            if title or artist_names:
+                rows.append((artist_names, title, year, primary_artist_id))
+        results = sp.next(results) if results.get("next") else None
+
+    unique_artist_ids = {artist_id for *_, artist_id in rows if artist_id}
+    genres_by_artist: dict[str, str] = {}
+    for artist_id in unique_artist_ids:
+        try:
+            artist = sp.artist(artist_id)
+        except Exception:
+            continue
+        genres_by_artist[artist_id] = ", ".join(artist.get("genres") or [])
+
+    return [
+        YearGenreTrack(
+            artist=artist_names,
+            title=title,
+            year=year,
+            genres=genres_by_artist.get(artist_id or "", ""),
+        )
+        for artist_names, title, year, artist_id in rows
+    ]

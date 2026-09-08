@@ -44,6 +44,7 @@ from crate_builder.showfile_auth import ShowfileAuthError, exchange_code, resolv
 from crate_builder.showfile_client import ShowfileNotConfigured, ShowfileSyncError, sync_playlist
 from crate_builder.update_checker import check_for_update
 from crate_builder.version import get_version
+from crate_builder.year_genre_log import build_year_genre_csv
 from crate_builder.yearcheck_runner import YearCheckError
 from crate_builder import yearcheck_runner, yearcheck_store
 from crate_builder.spotify_client import (
@@ -51,6 +52,7 @@ from crate_builder.spotify_client import (
     SpotifyNotConfigured,
     SpotifyNotConnected,
     fetch_playlist_tracks,
+    fetch_playlist_year_genre,
     get_login_url,
     handle_callback,
     is_connected,
@@ -584,6 +586,64 @@ def api_missing_log():
         csv_text,
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=missing_tracks.csv"},
+    )
+
+
+@app.route("/api/spotify/year-genre", methods=["POST"])
+def api_spotify_year_genre():
+    """Fetches year/genre for every track in a Spotify playlist — for
+    eyeballing the era/genre mix of what a client sent over, not for
+    matching against your library. Split from the CSV-download step below
+    it (rather than one form POST like /api/missing-log) because this one
+    actually calls out to Spotify — including one API call per unique
+    artist in the playlist for genre — so it can take a few seconds and
+    the UI needs a real response to report progress/errors on, not just a
+    file to save."""
+    data = request.get_json(force=True)
+    input_text = data.get("input_text", "").strip()
+    if not input_text:
+        return jsonify(error="Paste a Spotify playlist URL first"), 400
+    if not is_spotify_url(input_text):
+        return jsonify(error="This only works with a Spotify playlist URL — year/genre data comes from Spotify's own API."), 400
+
+    try:
+        tracks = fetch_playlist_year_genre(input_text)
+    except (SpotifyNotConfigured, SpotifyNotConnected) as exc:
+        return jsonify(error=str(exc)), 400
+    except SpotifyException as exc:
+        if exc.http_status == 403:
+            message = (
+                "Spotify refused to fetch that playlist (403 Forbidden). Make sure "
+                "you're logged in as an account that can see this playlist."
+            )
+        elif exc.http_status == 404:
+            message = "Spotify couldn't find that playlist — double check the URL."
+        else:
+            message = f"Spotify API error ({exc.http_status}): {exc.msg}"
+        return jsonify(error=message), 400
+
+    return jsonify(
+        tracks=[{"artist": t.artist, "title": t.title, "year": t.year, "genres": t.genres} for t in tracks],
+        count=len(tracks),
+    )
+
+
+@app.route("/api/spotify/year-genre-log", methods=["POST"])
+def api_spotify_year_genre_log():
+    # Takes the tracks already fetched by /api/spotify/year-genre above
+    # (no re-fetching from Spotify here) and turns them into a CSV
+    # download — same real-<form>-POST pattern as /api/missing-log, so it
+    # actually downloads instead of just rendering in the packaged app.
+    tracks_json = request.form.get("tracks_json")
+    tracks = json.loads(tracks_json) if tracks_json else []
+    if not tracks:
+        return jsonify(error="No tracks to export"), 400
+
+    csv_text = build_year_genre_csv(tracks)
+    return Response(
+        csv_text,
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=year_genre_breakdown.csv"},
     )
 
 

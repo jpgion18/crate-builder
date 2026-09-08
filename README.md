@@ -47,6 +47,19 @@ input methods.
    `_Serato_/Subcrates` folder, so it shows up as a new crate next time you
    open Serato.
 
+### Year/Genre Breakdown
+
+When the pasted input is a Spotify playlist URL, a "Get Year/Genre
+Breakdown (CSV)" button pulls each track's release year and genre and
+downloads it as a CSV — useful for quantifying what era/genre a client's
+playlist actually leans toward (e.g. a bride's requests) before deciding
+what else from your own library fits alongside the must-plays. Year comes
+free with the normal playlist fetch; genre only exists at the *artist*
+level in Spotify's API (never per-track), so this makes one extra API call
+per unique artist in the playlist — for a big playlist that can take a
+few seconds, and a lookup failing for one artist just leaves that artist's
+tracks with an empty genre rather than failing the whole export.
+
 ## Discover tab
 
 A separate **Discover** page (nav link at the top) for finding new music

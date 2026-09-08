@@ -497,6 +497,49 @@ function downloadMissingLog() {
 
 $("missing_log_btn").addEventListener("click", downloadMissingLog);
 
+const SPOTIFY_PLAYLIST_URL_PATTERN = /open\.spotify\.com\/playlist\/[a-zA-Z0-9]+|spotify:playlist:[a-zA-Z0-9]+/;
+
+$("year_genre_btn").addEventListener("click", async () => {
+  const input_text = $("input_text").value.trim();
+  if (!SPOTIFY_PLAYLIST_URL_PATTERN.test(input_text)) {
+    setStatus($("year_genre_status"), "Paste a Spotify playlist URL first — year/genre data only comes from Spotify.", true);
+    return;
+  }
+
+  // Genre means one Spotify API call per unique artist in the playlist —
+  // slow enough for a big playlist that this is worth its own status
+  // message rather than looking hung.
+  setStatus($("year_genre_status"), "Fetching from Spotify — checking every artist individually, can take a bit for a big playlist...");
+  try {
+    const data = await postJSON("/api/spotify/year-genre", { input_text });
+    setStatus($("year_genre_status"), `Fetched ${data.count} track(s). Downloading...`);
+    downloadYearGenreCsv(data.tracks);
+  } catch (err) {
+    setStatus($("year_genre_status"), err.message, true);
+  }
+});
+
+function downloadYearGenreCsv(tracks) {
+  // Same hidden-iframe <form> POST pattern as downloadMissingLog() above —
+  // the data's already fetched, this step just turns it into a real
+  // native file download without navigating the main page.
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = "/api/spotify/year-genre-log";
+  form.target = "download_frame";
+  form.style.display = "none";
+
+  const input = document.createElement("input");
+  input.type = "hidden";
+  input.name = "tracks_json";
+  input.value = JSON.stringify(tracks);
+  form.appendChild(input);
+
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+}
+
 $("sync_showfile_btn").addEventListener("click", async () => {
   const event_code = $("showfile_code").value.trim();
   const tracks = selectedMatchedTracks().map((t) => ({ artist: t.artist, title: t.title }));

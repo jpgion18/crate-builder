@@ -128,3 +128,98 @@ def test_fetch_playlist_tracks_paginates_and_skips_local_files(monkeypatch):
         InputTrack(artist="Artist A", title="Song A", raw="Artist A - Song A"),
         InputTrack(artist="Artist B", title="Song B", raw="Artist B - Song B"),
     ]
+
+
+def test_fetch_playlist_year_genre_pulls_year_and_genre(monkeypatch):
+    fake_sp = Mock()
+    fake_sp.playlist_items.return_value = {
+        "items": [
+            {
+                "item": {
+                    "name": "Song A",
+                    "artists": [{"name": "Artist A", "id": "artist-a"}],
+                    "album": {"release_date": "2015-06-12"},
+                }
+            }
+        ],
+        "next": None,
+    }
+    fake_sp.artist.return_value = {"genres": ["pop", "dance pop"]}
+    monkeypatch.setattr(spotify_client, "_get_client", lambda: fake_sp)
+
+    tracks = spotify_client.fetch_playlist_year_genre("playlist123")
+
+    assert tracks == [
+        spotify_client.YearGenreTrack(artist="Artist A", title="Song A", year="2015", genres="pop, dance pop")
+    ]
+    fake_sp.artist.assert_called_once_with("artist-a")
+
+
+def test_fetch_playlist_year_genre_calls_each_unique_artist_once(monkeypatch):
+    # Two tracks share the same primary artist — that artist should only
+    # be looked up once, not once per track (no batched "Several Artists"
+    # lookup since Spotify removed it, so this matters for the API budget).
+    fake_sp = Mock()
+    fake_sp.playlist_items.return_value = {
+        "items": [
+            {
+                "item": {
+                    "name": "Song A",
+                    "artists": [{"name": "Artist A", "id": "artist-a"}],
+                    "album": {"release_date": "2015"},
+                }
+            },
+            {
+                "item": {
+                    "name": "Song B",
+                    "artists": [{"name": "Artist A", "id": "artist-a"}],
+                    "album": {"release_date": "2016"},
+                }
+            },
+        ],
+        "next": None,
+    }
+    fake_sp.artist.return_value = {"genres": ["house"]}
+    monkeypatch.setattr(spotify_client, "_get_client", lambda: fake_sp)
+
+    tracks = spotify_client.fetch_playlist_year_genre("playlist123")
+
+    assert len(tracks) == 2
+    assert all(t.genres == "house" for t in tracks)
+    fake_sp.artist.assert_called_once_with("artist-a")
+
+
+def test_fetch_playlist_year_genre_survives_one_artist_lookup_failing(monkeypatch):
+    fake_sp = Mock()
+    fake_sp.playlist_items.return_value = {
+        "items": [
+            {
+                "item": {
+                    "name": "Song A",
+                    "artists": [{"name": "Artist A", "id": "artist-a"}],
+                    "album": {"release_date": "2015"},
+                }
+            }
+        ],
+        "next": None,
+    }
+    fake_sp.artist.side_effect = Exception("boom")
+    monkeypatch.setattr(spotify_client, "_get_client", lambda: fake_sp)
+
+    tracks = spotify_client.fetch_playlist_year_genre("playlist123")
+
+    assert tracks == [spotify_client.YearGenreTrack(artist="Artist A", title="Song A", year="2015", genres="")]
+
+
+def test_fetch_playlist_year_genre_handles_missing_album_or_artist_id(monkeypatch):
+    fake_sp = Mock()
+    fake_sp.playlist_items.return_value = {
+        "items": [{"item": {"name": "Local Rip", "artists": [{"name": "Unknown"}]}}],
+        "next": None,
+    }
+    monkeypatch.setattr(spotify_client, "_get_client", lambda: fake_sp)
+
+    tracks = spotify_client.fetch_playlist_year_genre("playlist123")
+
+    assert tracks == [spotify_client.YearGenreTrack(artist="Unknown", title="Local Rip", year="", genres="")]
+    fake_sp.artist.assert_not_called()
