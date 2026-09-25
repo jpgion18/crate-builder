@@ -584,7 +584,14 @@ def api_missing_log():
     csv_text = build_missing_log_csv(tracks)
     return Response(
         csv_text,
-        mimetype="text/csv",
+        # application/octet-stream, not text/csv: pywebview's embedded webview
+        # decides whether to download or just navigate to a response purely by
+        # MIME type (WKWebView.canShowMIMEType() on macOS) — it never looks at
+        # Content-Disposition at all. "text/csv" is something the webview can
+        # render as plain text, so it was doing exactly that (silently, inside
+        # the hidden download_frame) regardless of ALLOW_DOWNLOADS. A MIME type
+        # the webview can't render forces the real Save dialog every time.
+        mimetype="application/octet-stream",
         headers={"Content-Disposition": "attachment; filename=missing_tracks.csv"},
     )
 
@@ -644,7 +651,9 @@ def api_spotify_year_genre_log():
     csv_text = build_year_genre_csv(tracks)
     return Response(
         csv_text,
-        mimetype="text/csv",
+        # See /api/missing-log's comment — application/octet-stream forces an
+        # actual download instead of the webview rendering the CSV as text.
+        mimetype="application/octet-stream",
         headers={"Content-Disposition": "attachment; filename=year_genre_breakdown.csv"},
     )
 
@@ -738,7 +747,9 @@ def api_discover_export():
     csv_text = discovery_store.build_discovery_log_csv(entries)
     return Response(
         csv_text,
-        mimetype="text/csv",
+        # See /api/missing-log's comment — application/octet-stream forces an
+        # actual download instead of the webview rendering the CSV as text.
+        mimetype="application/octet-stream",
         headers={"Content-Disposition": "attachment; filename=discovery_log.csv"},
     )
 
