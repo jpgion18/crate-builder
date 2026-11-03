@@ -7,7 +7,7 @@ Read-only on the Serato library and audio files. The only file ever written is
 from __future__ import annotations
 
 import unicodedata
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -131,18 +131,104 @@ def convert(
 
     if progress is not None:
         progress(total, total, "")
+    return _finish(report, rb_tracks, nodes, options, output)
+
+
+def export_playlist(
+    track_paths: Sequence[str | Path],
+    playlist: str | Sequence[str],
+    output_path: str | Path | None,
+    options: ConvertOptions | None = None,
+    metadata: Mapping[str, DatabaseTrack] | None = None,
+    serato_notes: bool = True,
+    progress: ProgressCallback | None = None,
+) -> Report:
+    """Write audio files straight into one Rekordbox playlist. No Serato folder needed.
+
+    `playlist` is the playlist's name, nested with `>` (`"Gigs > Friday"`
+    puts playlist Friday in folder Gigs) or given as parts. Serato cues,
+    loops and beatgrids in the files' tags are carried over when present.
+    `metadata` maps a file path to known title/artist/album/genre, which
+    wins over the file's tags. `serato_notes=False` leaves out the "No
+    Serato cues" notes, for libraries that were never in Serato.
+    """
+    options = options or ConvertOptions()
+    parts = _playlist_parts(playlist)
+    output = Path(output_path).expanduser() if output_path is not None else None
+    if output is None and not options.dry_run:
+        raise ConvertError("output_path is required unless dry_run is set")
+    if output is not None:
+        _check_output_safe(output, None)
+    offset_mode, fixed_ms = options.mp3_offset_mode()
+
+    paths = list(dict.fromkeys(Path(p).expanduser() for p in track_paths))
+    if not paths:
+        raise ConvertError("No tracks to export")
+    label = " > ".join(parts)
+    report = Report(
+        serato_dir="",
+        output_path=str(output) if output else None,
+        cue_mode=CueMode(options.cue_mode).value,
+        crates=[label],
+    )
+
+    rb_tracks: list[RbTrack] = []
+    for done, path in enumerate(paths):
+        if progress is not None:
+            progress(done, len(paths), path.name)
+        track_report = TrackReport(stored_path=str(path), crates=[label])
+        report.tracks.append(track_report)
+        if not path.is_file():
+            track_report.warnings.append("File not found; left out of the XML")
+            continue
+        track_report.resolved_path = str(path)
+        rb_tracks.append(
+            _build_track(
+                len(rb_tracks) + 1,
+                path,
+                (metadata or {}).get(str(path)),
+                options,
+                offset_mode,
+                fixed_ms,
+                track_report,
+                serato_notes=serato_notes,
+            )
+        )
+
+    node = RbNode(parts[-1], track_ids=[t.track_id for t in rb_tracks])
+    for name in reversed(parts[:-1]):
+        node = RbNode(name, children=[node])
+    if progress is not None:
+        progress(len(paths), len(paths), "")
+    return _finish(report, rb_tracks, [node], options, output)
+
+
+def _finish(
+    report: Report,
+    rb_tracks: list[RbTrack],
+    nodes: list[RbNode],
+    options: ConvertOptions,
+    output: Path | None,
+) -> Report:
     problems = validate_tree(build_tree(rb_tracks, nodes).getroot())
     report.warnings.extend(f"XML check: {p}" for p in problems)
-
     if not options.dry_run and output is not None:
         write_xml(rb_tracks, nodes, output)
         report.written = True
     return report
 
 
-def _check_output_safe(output: Path, serato: Path) -> None:
+def _playlist_parts(playlist: str | Sequence[str]) -> tuple[str, ...]:
+    raw = playlist.split(">") if isinstance(playlist, str) else list(playlist)
+    parts = tuple(part.strip() for part in raw if part and part.strip())
+    if not parts:
+        raise ConvertError("Playlist name is empty")
+    return parts
+
+
+def _check_output_safe(output: Path, serato: Path | None) -> None:
     resolved = output.resolve()
-    if resolved.is_relative_to(serato.resolve()):
+    if serato is not None and resolved.is_relative_to(serato.resolve()):
         raise ConvertError(f"Refusing to write inside the Serato folder: {output}")
     if resolved.suffix.lower() in READERS:
         raise ConvertError(f"Refusing to write to an audio file path: {output}")
@@ -220,6 +306,7 @@ def _build_track(
     offset_mode: str,
     fixed_ms: float,
     report: TrackReport,
+    serato_notes: bool = True,
 ) -> RbTrack:
     fmt = format_of(path)
     tags: TrackTags = read_tags(path)
@@ -237,9 +324,13 @@ def _build_track(
     artist = (db.artist if db else None) or tags.artist or ""
     report.title, report.artist = title, artist
 
-    tempos, grid_bpm = _build_tempo(tags.beatgrid, offset_s, report)
+    tempos, grid_bpm = _build_tempo(tags.beatgrid, offset_s, report, serato_notes)
     marks = _build_marks(tags.markers, CueMode(options.cue_mode), offset_s, report)
-    if tags.markers is None and not any("Markers2" in w for w in report.warnings):
+    if (
+        serato_notes
+        and tags.markers is None
+        and not any("Markers2" in w for w in report.warnings)
+    ):
         report.warnings.append("No Serato cues or loops")
 
     bpm = grid_bpm or _parse_bpm(db.bpm if db else None)
@@ -266,10 +357,11 @@ def _build_track(
 
 
 def _build_tempo(
-    grid: list[GridMarker] | None, offset_s: float, report: TrackReport
+    grid: list[GridMarker] | None, offset_s: float, report: TrackReport, serato_notes: bool = True
 ) -> tuple[list[RbTempo], float | None]:
     if not grid:
-        report.warnings.append("No Serato beatgrid")
+        if serato_notes:
+            report.warnings.append("No Serato beatgrid")
         return [], None
     report.grid_markers = len(grid)
     bpm = segment_bpm(grid, 0)

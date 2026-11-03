@@ -45,6 +45,8 @@ from crate_builder.myevents_poller import ShowfilePendingError, poll_once, start
 from crate_builder.serato_database import SeratoDatabaseError, parse_database
 from crate_builder.seratobox import ConvertError, ConvertOptions, CueMode
 from crate_builder.seratobox import convert as convert_to_rekordbox
+from crate_builder.seratobox import export_playlist
+from crate_builder.seratobox.serato.models import DatabaseTrack
 from crate_builder.seratobox.serato.crates import CrateNode, crate_tree, read_all_crates
 from crate_builder.showfile_auth import ShowfileAuthError, exchange_code, resolved_base_url, start_login
 from crate_builder.showfile_client import ShowfileNotConfigured, ShowfileSyncError, sync_playlist
@@ -153,12 +155,18 @@ def _community_configured() -> bool:
     return bool(url)
 
 
+BUILD_TARGETS = ("serato", "rekordbox", "both")
+
+
 @app.route("/")
 def index():
+    serato_dir = serato_paths.guess_serato_dir()
     return render_template(
         "index.html",
         default_library_dir=serato_paths.guess_music_dir(),
-        default_serato_dir=serato_paths.guess_serato_dir(),
+        # Left blank when there's no Serato folder: Rekordbox-only DJs don't need one.
+        default_serato_dir=serato_dir if os.path.isdir(serato_dir) else "",
+        build_target=local_config.get_preference("build_target", "serato"),
         default_threshold=DEFAULT_THRESHOLD,
         showfile_configured=_showfile_configured(),
         community_configured=_community_configured(),
@@ -557,6 +565,8 @@ def api_build():
     crate_name = data.get("crate_name", "").strip()
     track_paths = data.get("track_paths", [])
     overwrite = bool(data.get("overwrite", False))
+    if data.get("target") in BUILD_TARGETS:
+        local_config.set_preference("build_target", data["target"])
 
     if not serato_dir:
         return jsonify(error="serato_dir is required"), 400
@@ -577,6 +587,59 @@ def api_build():
 
     # crate_ref: how the Rekordbox export names this exact crate ("Parent%%Child").
     return jsonify(path=dest_path, track_count=len(track_paths), crate_ref=filename[: -len(".crate")])
+
+
+@app.route("/api/build/rekordbox", methods=["POST"])
+def api_build_rekordbox():
+    """Build Crate's Rekordbox playlist: the selected tracks as an XML download.
+
+    A form POST into the hidden download_frame, like /api/missing-log. Needs
+    no Serato folder, so it works for DJs who only use Rekordbox.
+    """
+    crate_name = request.form.get("crate_name", "").strip()
+    target = request.form.get("target", "rekordbox")
+    try:
+        tracks = json.loads(request.form.get("tracks_json") or "[]")
+    except ValueError:
+        return jsonify(error="Invalid track list"), 400
+    tracks = [t for t in tracks if isinstance(t, dict) and t.get("path")]
+    if not crate_name:
+        return jsonify(error="Enter a crate name first."), 400
+    if not tracks:
+        return jsonify(error="No tracks selected."), 400
+    if target in BUILD_TARGETS:
+        local_config.set_preference("build_target", target)
+
+    # The library scan's title/artist (Serato's own when it was overlaid) beat raw file tags.
+    metadata = {
+        t["path"]: DatabaseTrack(
+            path=t["path"], title=t.get("title") or None, artist=t.get("artist") or None,
+            album=t.get("album") or None,
+        )
+        for t in tracks
+    }
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "rekordbox.xml"
+            export_playlist(
+                [t["path"] for t in tracks],
+                crate_name,
+                output,
+                ConvertOptions(),
+                metadata=metadata,
+                serato_notes=target == "both",
+            )
+            xml_bytes = output.read_bytes()
+    except ConvertError as exc:
+        return jsonify(error=str(exc)), 400
+
+    name = crate_name.split(">")[-1].strip()
+    return send_file(
+        io.BytesIO(xml_bytes),
+        mimetype="application/octet-stream",  # see /api/missing-log: forces the Save dialog
+        as_attachment=True,
+        download_name=f"{serato_paths.sanitize_crate_name(name)[: -len('.crate')]} (Rekordbox).xml",
+    )
 
 
 @app.route("/api/missing-log", methods=["POST"])

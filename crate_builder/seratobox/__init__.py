@@ -10,7 +10,7 @@ print(report.render())
 
 __version__ = "0.3.0"
 
-from .core import ConvertError, convert  # noqa: E402
+from .core import ConvertError, convert, export_playlist  # noqa: E402
 from .options import ConvertOptions, CueMode  # noqa: E402
 from .report import Report, TrackReport  # noqa: E402
 
@@ -22,4 +22,5 @@ __all__ = [
     "TrackReport",
     "__version__",
     "convert",
+    "export_playlist",
 ]

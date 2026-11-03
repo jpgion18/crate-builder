@@ -38,3 +38,23 @@ def test_update_settings_rejects_unknown_key():
 def test_get_rejects_unknown_key():
     with pytest.raises(ValueError):
         local_config.get("not_a_real_setting")
+
+
+def test_preference_round_trip_and_default():
+    assert local_config.get_preference("build_target", "serato") == "serato"
+    local_config.set_preference("build_target", "rekordbox")
+    assert local_config.get_preference("build_target", "serato") == "rekordbox"
+
+
+def test_preference_survives_settings_update_and_stays_out_of_settings():
+    local_config.set_preference("build_target", "both")
+    local_config.update_settings(showfile_url="https://www.showfile.events")
+    assert local_config.get_preference("build_target", "serato") == "both"
+    assert "build_target" not in local_config.get_settings()
+
+
+def test_preference_rejects_unknown_key_and_value():
+    with pytest.raises(ValueError):
+        local_config.set_preference("build_target", "traktor")
+    with pytest.raises(ValueError):
+        local_config.get_preference("nope", "x")

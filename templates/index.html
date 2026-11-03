@@ -22,7 +22,7 @@
     <p class="subtitle">
       Paste a CSV, a Spotify playlist link, or a plain track list. It'll be
       fuzzy-matched against your local music library and turned into a
-      Serato crate.
+      Serato crate, a Rekordbox playlist, or both.
     </p>
 
     <section class="panel">
@@ -35,11 +35,11 @@
 
       <div class="field">
         <label for="serato_dir">Serato "_Serato_" folder</label>
-        <input id="serato_dir" type="text" value="{{ default_serato_dir }}" />
+        <input id="serato_dir" type="text" value="{{ default_serato_dir }}" placeholder="Not needed for Rekordbox playlists" />
       </div>
 
       <div class="field">
-        <label for="crate_name">Crate name</label>
+        <label for="crate_name">Crate / playlist name</label>
         <input id="crate_name" type="text" placeholder="e.g. Summer Set 2026" />
       </div>
 
@@ -102,6 +102,14 @@
         <tbody></tbody>
       </table>
 
+      <div class="field">
+        <label for="build_target">Build for</label>
+        <select id="build_target">
+          <option value="serato"{% if build_target == "serato" %} selected{% endif %}>Serato crate</option>
+          <option value="rekordbox"{% if build_target == "rekordbox" %} selected{% endif %}>Rekordbox playlist (saves an XML file)</option>
+          <option value="both"{% if build_target == "both" %} selected{% endif %}>Serato crate + Rekordbox playlist</option>
+        </select>
+      </div>
       <button id="build_btn" type="button">Build Crate</button>
       <button id="missing_log_btn" type="button">Download Missing Tracks Log</button>
       <span id="build_status" class="status"></span>
@@ -113,10 +121,6 @@
         <span id="sync_showfile_status" class="status">{% if not showfile_configured %}Connect Showfile in <a href="/settings" style="color: inherit;">Settings</a> to enable.{% endif %}</span>
       </div>
 
-      <div class="field">
-        <label><input type="checkbox" id="rekordbox_export" /> Also export this crate to Rekordbox (saves an XML file; see the <a href="/rekordbox" style="color: inherit;">Rekordbox</a> tab)</label>
-        <span id="rekordbox_export_status" class="status"></span>
-      </div>
       <div class="field community_field">
         <label><input type="checkbox" id="community_publish" /> Also publish this crate to the Community feed</label>
       </div>
@@ -142,7 +146,6 @@
        the response here, off-screen, instead of navigating the whole app away
        from your matches. -->
   <iframe name="download_frame" style="display: none;"></iframe>
-  <script src="{{ url_for('static', filename='rekordbox_export.js') }}"></script>
 
   <script src="{{ url_for('static', filename='handoff.js') }}"></script>
   <script src="{{ url_for('static', filename='app.js') }}"></script>

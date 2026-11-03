@@ -3,7 +3,8 @@
 A free, local alternative to services like cratehackers.com: paste a CSV, a
 Spotify playlist URL, a Dropbox/Google Drive share link, or a plain track
 list, and it fuzzy-matches those tracks against your local music library and
-writes a new Serato crate.
+writes a new Serato crate, a Rekordbox playlist, or both. Rekordbox-only DJs
+don't need Serato at all.
 
 Everything runs on your own machine — your music files, your Serato
 database, and the matching all stay local. Nothing is uploaded anywhere
@@ -43,9 +44,13 @@ input methods.
    "+ Add another version" button on every row lets one input line add more
    than one library track to the crate (e.g. a Jump Off edit alongside the
    Extended Version of the same song, to mix one into the other).
-4. **Build** — writes a new `.crate` file into your Serato
-   `_Serato_/Subcrates` folder, so it shows up as a new crate next time you
-   open Serato.
+4. **Build** — depending on **Build for**: writes a new `.crate` file into
+   your Serato `_Serato_/Subcrates` folder, so it shows up as a new crate
+   next time you open Serato; and/or saves a **Rekordbox playlist** as an
+   XML file to import into Rekordbox (see the Rekordbox tab's **?** for the
+   steps). The Rekordbox playlist needs no Serato folder, and keeps any
+   Serato cues, loops and beatgrids the files already have. Your choice is
+   remembered.
 
 ### Year/Genre Breakdown
 
@@ -162,9 +167,9 @@ library and music files**: the only thing written is the XML file you save.
    playlists appear under **rekordbox xml** in the sidebar: right-click one
    and choose **Import Playlist**. The **?** on the tab shows these steps too.
 
-Building a crate on the main page? Tick **"Also export this crate to
-Rekordbox"** next to Build Crate to save the XML for that crate in the same
-step.
+Building a crate on the main page? Set **Build for** to *Rekordbox
+playlist* or *Serato crate + Rekordbox playlist* to save the XML in the same
+step; Rekordbox-only DJs can leave the Serato folder empty.
 
 Options:
 - **Cues:** *Hot cues + matching memory cues* (default) puts each Serato hot
@@ -361,15 +366,19 @@ Either way, the workflow is the same:
    **Scan Library**.
 2. Set your **Serato folder** — the one containing `_Serato_`
    (defaults to `~/Music/_Serato_`; change it if yours lives elsewhere,
-   e.g. a different drive).
+   e.g. a different drive). Building only Rekordbox playlists? Leave it
+   empty.
 3. Enter a **crate name**. Use `Parent > Child` to build it as a subcrate
-   nested under an existing crate.
+   nested under an existing crate (or a playlist inside a folder, in
+   Rekordbox).
 4. Paste your CSV / Spotify playlist URL / track list into the text box and
    click **Preview Matches**.
 5. Review the match table — uncheck anything wrong, or click **Find match**
    on unmatched rows to manually search and pick the right file.
-6. Click **Build Crate**.
-7. Restart Serato (or use its "rescan" option) to see the new crate.
+6. Pick what to **Build for** (Serato crate, Rekordbox playlist, or both)
+   and click **Build**.
+7. Serato: restart it (or use its "rescan" option) to see the new crate.
+   Rekordbox: save the XML, then import it (Rekordbox tab → **?**).
 
 ## Notes on the `.crate` format
 

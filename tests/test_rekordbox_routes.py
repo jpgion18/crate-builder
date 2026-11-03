@@ -125,3 +125,58 @@ def test_build_crate_then_export(client, library: Library) -> None:
     assert names == {"Opener (DB)", "Low End"}
     playlist = root.find("PLAYLISTS/NODE/NODE/NODE")
     assert playlist is not None and (playlist.get("Name"), playlist.get("Entries")) == ("Friday", "2")
+
+
+def _build_rekordbox(client, tracks: list[dict], name: str = "Gigs > Friday", target: str = "rekordbox"):
+    form = {"crate_name": name, "target": target, "tracks_json": json.dumps(tracks)}
+    return client.post("/api/build/rekordbox", data=form)
+
+
+def test_build_rekordbox_playlist_without_serato(client, library: Library) -> None:
+    from crate_builder import local_config
+
+    before = _snapshot(library.drive)
+    tracks = [
+        {"path": str(library.files["Music/House/Opener.mp3"]), "title": "Opener", "artist": "DJ Test"},
+        {"path": str(library.files["Music/Deep/Warehouse.aiff"]), "title": "Warehouse (scan)", "artist": ""},
+    ]
+    res = _build_rekordbox(client, tracks)
+    assert res.status_code == 200, res.get_data(as_text=True)
+    assert 'filename="Friday (Rekordbox).xml"' in res.headers["Content-Disposition"]
+    root = ET.fromstring(res.get_data())
+    assert validate_tree(root) == []
+    assert [t.get("Name") for t in root.iterfind("COLLECTION/TRACK")] == ["Opener", "Warehouse (scan)"]
+    playlist = root.find("PLAYLISTS/NODE/NODE/NODE")
+    assert (playlist.get("Name"), playlist.get("Entries")) == ("Friday", "2")
+    assert local_config.get_preference("build_target", "serato") == "rekordbox"
+    assert _snapshot(library.drive) == before  # nothing written into the library or Serato
+
+
+@pytest.mark.parametrize(
+    ("name", "tracks", "message"),
+    [("", [{"path": "/x.mp3"}], "crate name"), ("X", [], "No tracks"), ("X", [{"title": "no path"}], "No tracks")],
+)
+def test_build_rekordbox_rejects_bad_requests(client, name: str, tracks: list, message: str) -> None:
+    res = _build_rekordbox(client, tracks, name=name)
+    assert res.status_code == 400 and message in res.get_json()["error"]
+
+
+def test_build_target_remembered_and_preselected(client, library: Library) -> None:
+    from crate_builder import local_config
+
+    tracks = [str(library.files["Music/House/Opener.mp3"])]
+    client.post(
+        "/api/build",
+        json={"serato_dir": str(library.serato), "crate_name": "Both", "track_paths": tracks, "target": "both"},
+    )
+    assert local_config.get_preference("build_target", "serato") == "both"
+    html = client.get("/").get_data(as_text=True)
+    assert '<option value="both" selected>' in html
+
+
+def test_serato_folder_blank_when_missing(client, monkeypatch, tmp_path: Path) -> None:
+    from crate_builder import serato_paths
+
+    monkeypatch.setattr(serato_paths, "guess_serato_dir", lambda: str(tmp_path / "no" / "_Serato_"))
+    html = client.get("/").get_data(as_text=True)
+    assert 'id="serato_dir" type="text" value=""' in html
