@@ -424,3 +424,22 @@ body.has-preview-player main { padding-bottom: 4.5rem; }
   justify-content: center;
   margin-top: 1rem;
 }
+
+/* Rekordbox tab */
+.help-btn { border-radius: 50%; width: 2rem; height: 2rem; padding: 0; font-weight: 700; }
+.crate-tree ul { list-style: none; margin: 0; padding-left: 1.2rem; }
+.crate-tree > ul { padding-left: 0; margin: 0.75rem 0; max-height: 360px; overflow-y: auto; }
+.crate-tree li { padding: 0.15rem 0; }
+.crate-tree label { cursor: pointer; }
+.crate-tree .track-count { color: var(--muted); font-size: 0.8rem; margin-left: 0.5rem; }
+.rb-pick-row { display: flex; gap: 0.5rem; }
+.field select, .field input[type="number"] {
+  padding: 0.45rem;
+  background: #0f1115;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+}
+.field input[type="number"] { width: 90px; }
+#rb_table td.num { text-align: right; }
+.rb-notes { color: var(--muted); font-size: 0.85rem; padding-left: 1.2rem; }

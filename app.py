@@ -8,10 +8,13 @@ Then open http://127.0.0.1:5001 in your browser.
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import sys
+import tempfile
 import webbrowser
+from pathlib import Path
 from urllib.parse import urlencode
 
 from dotenv import load_dotenv
@@ -40,6 +43,11 @@ from crate_builder.metadata_editor import (
 from crate_builder.missing_log import build_missing_log_csv
 from crate_builder.myevents_poller import ShowfilePendingError, poll_once, start_background_polling
 from crate_builder.serato_database import SeratoDatabaseError, parse_database
+from crate_builder.seratobox import ConvertError, ConvertOptions, CueMode
+from crate_builder.seratobox import convert as convert_to_rekordbox
+from crate_builder.seratobox import export_playlist
+from crate_builder.seratobox.serato.models import DatabaseTrack
+from crate_builder.seratobox.serato.crates import CrateNode, crate_tree, read_all_crates
 from crate_builder.showfile_auth import ShowfileAuthError, exchange_code, resolved_base_url, start_login
 from crate_builder.showfile_client import ShowfileNotConfigured, ShowfileSyncError, sync_playlist
 from crate_builder.update_checker import check_for_update
@@ -147,12 +155,18 @@ def _community_configured() -> bool:
     return bool(url)
 
 
+BUILD_TARGETS = ("serato", "rekordbox", "both")
+
+
 @app.route("/")
 def index():
+    serato_dir = serato_paths.guess_serato_dir()
     return render_template(
         "index.html",
         default_library_dir=serato_paths.guess_music_dir(),
-        default_serato_dir=serato_paths.guess_serato_dir(),
+        # Left blank when there's no Serato folder: Rekordbox-only DJs don't need one.
+        default_serato_dir=serato_dir if os.path.isdir(serato_dir) else "",
+        build_target=local_config.get_preference("build_target", "serato"),
         default_threshold=DEFAULT_THRESHOLD,
         showfile_configured=_showfile_configured(),
         community_configured=_community_configured(),
@@ -180,6 +194,11 @@ def library_page():
         default_library_dir=serato_paths.guess_music_dir(),
         default_serato_dir=serato_paths.guess_serato_dir(),
     )
+
+
+@app.route("/rekordbox")
+def rekordbox_page():
+    return render_template("rekordbox.html", default_serato_dir=serato_paths.guess_serato_dir())
 
 
 @app.route("/myevents")
@@ -546,6 +565,8 @@ def api_build():
     crate_name = data.get("crate_name", "").strip()
     track_paths = data.get("track_paths", [])
     overwrite = bool(data.get("overwrite", False))
+    if data.get("target") in BUILD_TARGETS:
+        local_config.set_preference("build_target", data["target"])
 
     if not serato_dir:
         return jsonify(error="serato_dir is required"), 400
@@ -564,7 +585,61 @@ def api_build():
     except FileExistsError:
         return jsonify(error="exists", path=dest_path), 409
 
-    return jsonify(path=dest_path, track_count=len(track_paths))
+    # crate_ref: how the Rekordbox export names this exact crate ("Parent%%Child").
+    return jsonify(path=dest_path, track_count=len(track_paths), crate_ref=filename[: -len(".crate")])
+
+
+@app.route("/api/build/rekordbox", methods=["POST"])
+def api_build_rekordbox():
+    """Build Crate's Rekordbox playlist: the selected tracks as an XML download.
+
+    A form POST into the hidden download_frame, like /api/missing-log. Needs
+    no Serato folder, so it works for DJs who only use Rekordbox.
+    """
+    crate_name = request.form.get("crate_name", "").strip()
+    target = request.form.get("target", "rekordbox")
+    try:
+        tracks = json.loads(request.form.get("tracks_json") or "[]")
+    except ValueError:
+        return jsonify(error="Invalid track list"), 400
+    tracks = [t for t in tracks if isinstance(t, dict) and t.get("path")]
+    if not crate_name:
+        return jsonify(error="Enter a crate name first."), 400
+    if not tracks:
+        return jsonify(error="No tracks selected."), 400
+    if target in BUILD_TARGETS:
+        local_config.set_preference("build_target", target)
+
+    # The library scan's title/artist (Serato's own when it was overlaid) beat raw file tags.
+    metadata = {
+        t["path"]: DatabaseTrack(
+            path=t["path"], title=t.get("title") or None, artist=t.get("artist") or None,
+            album=t.get("album") or None,
+        )
+        for t in tracks
+    }
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "rekordbox.xml"
+            export_playlist(
+                [t["path"] for t in tracks],
+                crate_name,
+                output,
+                ConvertOptions(),
+                metadata=metadata,
+                serato_notes=target == "both",
+            )
+            xml_bytes = output.read_bytes()
+    except ConvertError as exc:
+        return jsonify(error=str(exc)), 400
+
+    name = crate_name.split(">")[-1].strip()
+    return send_file(
+        io.BytesIO(xml_bytes),
+        mimetype="application/octet-stream",  # see /api/missing-log: forces the Save dialog
+        as_attachment=True,
+        download_name=f"{serato_paths.sanitize_crate_name(name)[: -len('.crate')]} (Rekordbox).xml",
+    )
 
 
 @app.route("/api/missing-log", methods=["POST"])
@@ -593,6 +668,93 @@ def api_missing_log():
         # the webview can't render forces the real Save dialog every time.
         mimetype="application/octet-stream",
         headers={"Content-Disposition": "attachment; filename=missing_tracks.csv"},
+    )
+
+
+def _crate_node_json(node: CrateNode) -> dict:
+    return {
+        "name": node.name,
+        # None for a parent folder with no .crate file of its own (nothing to export).
+        "ref": node.ref if node.crate else None,
+        "track_count": node.track_count,
+        "children": [_crate_node_json(child) for child in node.children],
+    }
+
+
+def _rekordbox_request(data) -> tuple[str, list[str], ConvertOptions]:
+    """Validate a Rekordbox export/preview request. Raises ValueError with a user-facing message."""
+    serato_dir = os.path.expanduser((data.get("serato_dir") or "").strip())
+    if not serato_dir:
+        raise ValueError("Set your Serato folder first.")
+    crates = [c for c in (data.get("crates") or []) if isinstance(c, str) and c]
+    if not crates:
+        raise ValueError("Tick at least one crate.")
+    try:
+        cue_mode = CueMode(data.get("cue_mode") or CueMode.BOTH.value)
+    except ValueError:
+        raise ValueError("Unknown cue mode.") from None
+    options = ConvertOptions(
+        cue_mode=cue_mode,
+        mp3_offset=data.get("mp3_offset") or "auto",
+        include_subcrates=False,  # the page ticks subcrates explicitly
+    )
+    options.mp3_offset_mode()  # raises ValueError for a bad offset
+    return serato_dir, crates, options
+
+
+@app.route("/api/rekordbox/crates", methods=["GET"])
+def api_rekordbox_crates():
+    serato_dir = os.path.expanduser(request.args.get("serato_dir", "").strip())
+    if not serato_dir or not os.path.isdir(serato_dir):
+        return jsonify(error=f"Serato folder not found: {serato_dir or '(empty)'}"), 400
+    warnings: list[str] = []
+    crates = read_all_crates(Path(serato_dir), warnings)
+    return jsonify(
+        crates=[_crate_node_json(node) for node in crate_tree(crates)],
+        count=len(crates),
+        warnings=warnings,
+    )
+
+
+@app.route("/api/rekordbox/preview", methods=["POST"])
+def api_rekordbox_preview():
+    try:
+        serato_dir, crates, options = _rekordbox_request(request.get_json(force=True))
+        options.dry_run = True
+        report = convert_to_rekordbox(crates, serato_dir, None, options)
+    except (ValueError, ConvertError) as exc:
+        return jsonify(error=str(exc)), 400
+    return jsonify(report=report.to_dict(), text=report.render())
+
+
+@app.route("/api/rekordbox/export", methods=["POST"])
+def api_rekordbox_export():
+    # A real form POST into the hidden download_frame, like /api/missing-log,
+    # so the packaged app's webview shows a native Save dialog. The page runs
+    # /api/rekordbox/preview first, so errors here are already surfaced there.
+    try:
+        data = {
+            "serato_dir": request.form.get("serato_dir", ""),
+            "crates": json.loads(request.form.get("crates_json") or "[]"),
+            "cue_mode": request.form.get("cue_mode", ""),
+            "mp3_offset": request.form.get("mp3_offset", ""),
+        }
+        serato_dir, crates, options = _rekordbox_request(data)
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "rekordbox.xml"
+            convert_to_rekordbox(crates, serato_dir, output, options)
+            xml_bytes = output.read_bytes()
+    except (ValueError, ConvertError) as exc:
+        return jsonify(error=str(exc)), 400
+
+    # One crate, or one crate plus its subcrates: name the file after it.
+    tops = {c.split("%%")[0] for c in crates}
+    name = crates[0].split("%%")[-1] if len(crates) == 1 else tops.pop() if len(tops) == 1 else "Serato crates"
+    return send_file(
+        io.BytesIO(xml_bytes),
+        mimetype="application/octet-stream",  # see /api/missing-log: forces the Save dialog
+        as_attachment=True,
+        download_name=f"{serato_paths.sanitize_crate_name(name)[: -len('.crate')]} (Rekordbox).xml",
     )
 
 

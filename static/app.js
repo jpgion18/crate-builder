@@ -415,9 +415,48 @@ async function publishToCommunity(crate_name, selected) {
   }
 }
 
+const BUILD_LABELS = {
+  serato: "Build Crate",
+  rekordbox: "Build Rekordbox Playlist",
+  both: "Build Crate + Rekordbox Playlist",
+};
+
+function updateBuildLabel() {
+  $("build_btn").textContent = BUILD_LABELS[$("build_target").value] || "Build Crate";
+}
+
+$("build_target").addEventListener("change", updateBuildLabel);
+updateBuildLabel();
+
+function downloadRekordboxPlaylist(crate_name, selected, target) {
+  // Same hidden-iframe <form> POST as downloadMissingLog() below, so the
+  // packaged app's webview shows a real Save dialog.
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = "/api/build/rekordbox";
+  form.target = "download_frame";
+  form.style.display = "none";
+  const fields = {
+    crate_name,
+    target,
+    tracks_json: JSON.stringify(selected.map((t) => ({ path: t.path, title: t.title, artist: t.artist, album: t.album }))),
+  };
+  for (const [name, value] of Object.entries(fields)) {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  }
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+}
+
 async function buildCrate(overwrite = false) {
   const serato_dir = $("serato_dir").value.trim();
   const crate_name = $("crate_name").value.trim();
+  const target = $("build_target").value;
   const selected = selectedMatchedTracks();
   const track_paths = selected.map((t) => t.path);
 
@@ -429,11 +468,23 @@ async function buildCrate(overwrite = false) {
     setStatus($("build_status"), "No tracks selected.", true);
     return;
   }
+  if (target !== "rekordbox" && !serato_dir) {
+    setStatus($("build_status"), "Set your Serato folder first, or build for Rekordbox only.", true);
+    return;
+  }
 
   setStatus($("build_status"), "Building...");
   try {
-    const data = await postJSON("/api/build", { serato_dir, crate_name, track_paths, overwrite });
-    setStatus($("build_status"), `Crate written: ${data.path} (${data.track_count} tracks). Restart Serato (or rescan) to see it.`);
+    const messages = [];
+    if (target !== "rekordbox") {
+      const data = await postJSON("/api/build", { serato_dir, crate_name, track_paths, overwrite, target });
+      messages.push(`Crate written: ${data.path} (${data.track_count} tracks). Restart Serato (or rescan) to see it.`);
+    }
+    if (target !== "serato") {
+      downloadRekordboxPlaylist(crate_name, selected, target);
+      messages.push(`Rekordbox playlist: choose where to save the XML (${selected.length} tracks). Import steps are on the Rekordbox tab (press ?).`);
+    }
+    setStatus($("build_status"), messages.join(" "));
     if ($("community_publish").checked) {
       await publishToCommunity(crate_name, selected);
     }
