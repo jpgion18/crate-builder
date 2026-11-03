@@ -415,6 +415,17 @@ async function publishToCommunity(crate_name, selected) {
   }
 }
 
+async function exportBuiltCrateToRekordbox(serato_dir, crate_ref) {
+  setStatus($("rekordbox_export_status"), "Exporting to Rekordbox...");
+  try {
+    const data = await window.rekordboxExport.exportCrates({ serato_dir, crates: [crate_ref] });
+    const found = data.report.tracks.filter((t) => t.found).length;
+    setStatus($("rekordbox_export_status"), `Rekordbox: choose where to save the XML (${found} tracks). Import steps are on the Rekordbox tab.`);
+  } catch (err) {
+    setStatus($("rekordbox_export_status"), `Rekordbox export failed: ${err.message}`, true);
+  }
+}
+
 async function buildCrate(overwrite = false) {
   const serato_dir = $("serato_dir").value.trim();
   const crate_name = $("crate_name").value.trim();
@@ -434,6 +445,9 @@ async function buildCrate(overwrite = false) {
   try {
     const data = await postJSON("/api/build", { serato_dir, crate_name, track_paths, overwrite });
     setStatus($("build_status"), `Crate written: ${data.path} (${data.track_count} tracks). Restart Serato (or rescan) to see it.`);
+    if ($("rekordbox_export").checked) {
+      await exportBuiltCrateToRekordbox(serato_dir, data.crate_ref);
+    }
     if ($("community_publish").checked) {
       await publishToCommunity(crate_name, selected);
     }

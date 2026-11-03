@@ -1,6 +1,7 @@
 import pytest
 
 from crate_builder import local_config
+from seratobox_fixtures import library  # noqa: F401  (Rekordbox export tests' fake Serato library)
 
 
 @pytest.fixture(autouse=True)

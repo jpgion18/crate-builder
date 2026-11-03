@@ -15,6 +15,7 @@
       <a href="/discover">Discover</a>
       <a href="/community">Community</a>
       <a href="/library">Library Tools</a>
+      <a href="/rekordbox">Rekordbox</a>
       <a href="/settings">Settings</a>
     </nav>
     <h1>Crate Builder</h1>
@@ -112,6 +113,10 @@
         <span id="sync_showfile_status" class="status">{% if not showfile_configured %}Connect Showfile in <a href="/settings" style="color: inherit;">Settings</a> to enable.{% endif %}</span>
       </div>
 
+      <div class="field">
+        <label><input type="checkbox" id="rekordbox_export" /> Also export this crate to Rekordbox (saves an XML file; see the <a href="/rekordbox" style="color: inherit;">Rekordbox</a> tab)</label>
+        <span id="rekordbox_export_status" class="status"></span>
+      </div>
       <div class="field community_field">
         <label><input type="checkbox" id="community_publish" /> Also publish this crate to the Community feed</label>
       </div>
@@ -137,6 +142,7 @@
        the response here, off-screen, instead of navigating the whole app away
        from your matches. -->
   <iframe name="download_frame" style="display: none;"></iframe>
+  <script src="{{ url_for('static', filename='rekordbox_export.js') }}"></script>
 
   <script src="{{ url_for('static', filename='handoff.js') }}"></script>
   <script src="{{ url_for('static', filename='app.js') }}"></script>

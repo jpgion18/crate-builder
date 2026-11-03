@@ -142,6 +142,55 @@ yet. Spotify's "audio features" data (danceability, energy, etc.) isn't an
 option at all — Spotify deprecated that whole API for new apps in late
 2024, which includes crate-builder's shared app.
 
+## Rekordbox tab
+
+Turns Serato crates into Rekordbox playlists, with hot cues, memory cues,
+saved loops and beatgrids, so a crate you built (or any crate in your
+library) can also go to a gig on Rekordbox. It's **read-only on your Serato
+library and music files**: the only thing written is the XML file you save.
+
+1. Open **Rekordbox** in the top bar. Your crates load from the Serato
+   folder (change it if yours lives elsewhere). Tick the crates to convert;
+   ticking a crate ticks the crates nested inside it.
+2. **Preview** lists every track with its hot cues, memory cues, loops and
+   BPM, plus anything that won't carry over (a missing file, a track with no
+   beatgrid). Nothing is saved. **Copy report** copies the full text
+   version.
+3. **Export to Rekordbox** saves the XML file.
+4. In Rekordbox: Settings → View → Layout, turn on **rekordbox xml**. Then
+   Settings → Advanced → Database → rekordbox xml, and choose the file. The
+   playlists appear under **rekordbox xml** in the sidebar: right-click one
+   and choose **Import Playlist**. The **?** on the tab shows these steps too.
+
+Building a crate on the main page? Tick **"Also export this crate to
+Rekordbox"** next to Build Crate to save the XML for that crate in the same
+step.
+
+Options:
+- **Cues:** *Hot cues + matching memory cues* (default) puts each Serato hot
+  cue in the same Rekordbox slot (cue 1 → A) and adds a memory cue at the
+  same spot. Or *Hot cues only* / *Memory cues only*. Saved loops become
+  memory loops (or, in hot-cues-only mode, hot loops in free slots).
+- **MP3 cue shift:** Serato and Rekordbox can disagree by a few milliseconds
+  on where some MP3s start. *Automatic* detects each MP3's encoder header
+  and shows it in the report but doesn't shift anything yet (being
+  calibrated against real tracks); *Custom* applies a fixed shift.
+
+Known limitations: a Serato beatgrid with several tempo markers is flattened
+to its first marker (with a note in the report); cue colors are passed
+through as stored and Rekordbox snaps them to its own palette; Smart Crates
+and the legacy `Serato Markers_` tag aren't read; tracks already in your
+Rekordbox collection may keep their existing cues.
+
+Under the hood this is `crate_builder/seratobox/`, originally the standalone
+SeratoBox app. It has no dependency on the rest of Crate Builder and only
+needs `mutagen`; it also runs from the command line:
+
+```bash
+python -m crate_builder.seratobox "My Crate" --dry-run
+python -m crate_builder.seratobox "My Crate" -o ~/Desktop/rekordbox.xml
+```
+
 ## Desktop app (recommended for most users)
 
 Most people don't need to touch Python or a terminal at all: download the

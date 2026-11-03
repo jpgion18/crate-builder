@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}" />
+  <title>Rekordbox - Crate Builder</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <main>
+    <nav class="top-nav">
+      <a href="/" class="brand"><img src="{{ url_for('static', filename='logo.png') }}" alt="" class="brand-logo" />Crate Builder</a>
+      <a href="/myevents">MyEvents</a>
+      <a href="/discover">Discover</a>
+      <a href="/community">Community</a>
+      <a href="/library">Library Tools</a>
+      <a href="/rekordbox" class="active">Rekordbox</a>
+      <a href="/settings">Settings</a>
+    </nav>
+    <div class="results_header">
+      <h1>Rekordbox Export</h1>
+      <button id="rb_help_btn" type="button" class="secondary help-btn" aria-expanded="false"
+        aria-controls="rb_help"
+        title="1. Tick crates, Preview, then Export to Rekordbox and save the file.&#10;2. Rekordbox: Settings > View > Layout: turn on rekordbox xml.&#10;3. Settings > Advanced > Database > rekordbox xml: Browse and choose the file.&#10;4. Sidebar: rekordbox xml > Playlists, right-click a playlist > Import Playlist.">?</button>
+    </div>
+    <p class="subtitle">
+      Turn Serato crates into Rekordbox playlists, with hot cues, memory cues,
+      saved loops and beatgrids. Read-only on your Serato library and music:
+      the only thing written is the XML file you save.
+    </p>
+
+    <section id="rb_help" class="panel hidden">
+      <h2>How to use it</h2>
+      <ol>
+        <li>Tick the crates to convert. Ticking a crate ticks the crates inside it.</li>
+        <li><strong>Preview</strong> shows every track with its cues, loops and BPM, plus anything that won't carry over. Nothing is saved.</li>
+        <li><strong>Export to Rekordbox</strong> saves the XML file.</li>
+      </ol>
+      <h2>Then in Rekordbox</h2>
+      <ol>
+        <li>Settings &gt; View &gt; Layout: turn on <em>rekordbox xml</em>.</li>
+        <li>Settings &gt; Advanced &gt; Database &gt; rekordbox xml: <em>Browse</em> and choose the saved file.</li>
+        <li>In the sidebar, open <em>rekordbox xml &gt; Playlists</em>, right-click a playlist and choose <em>Import Playlist</em>.</li>
+      </ol>
+      <p class="subtitle">Tracks already in your Rekordbox collection may keep their existing cues.</p>
+    </section>
+
+    <section class="panel">
+      <div class="field">
+        <label for="serato_dir">Serato folder</label>
+        <input id="serato_dir" type="text" value="{{ default_serato_dir }}" />
+        <button id="rb_load_btn" type="button" class="secondary">Load Crates</button>
+      </div>
+      <span id="rb_crates_status" class="status"></span>
+      <div id="rb_crate_tree" class="crate-tree"></div>
+      <div class="rb-pick-row">
+        <button id="rb_all_btn" type="button" class="secondary">Select all</button>
+        <button id="rb_none_btn" type="button" class="secondary">Select none</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="field">
+        <label for="rb_cue_mode">Cues</label>
+        <select id="rb_cue_mode">
+          <option value="both">Hot cues + matching memory cues</option>
+          <option value="hotcues">Hot cues only</option>
+          <option value="memory">Memory cues only</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="rb_mp3_mode">MP3 cue shift</label>
+        <select id="rb_mp3_mode">
+          <option value="auto">Automatic</option>
+          <option value="off">Off</option>
+          <option value="custom">Custom</option>
+        </select>
+        <input id="rb_mp3_ms" type="number" value="0" min="-500" max="500" step="1" disabled /> ms
+      </div>
+      <button id="rb_preview_btn" type="button" class="secondary">Preview</button>
+      <button id="rb_export_btn" type="button">Export to Rekordbox</button>
+      <span id="rb_status" class="status"></span>
+    </section>
+
+    <section id="rb_results_panel" class="panel hidden">
+      <div class="results_header">
+        <h2>Tracks</h2>
+        <button id="rb_copy_btn" type="button" class="secondary" title="Copy the full text report, e.g. to send for troubleshooting">Copy report</button>
+      </div>
+      <p id="rb_summary"></p>
+      <table id="rb_table">
+        <thead>
+          <tr><th></th><th>Type</th><th>Track</th><th>Hot cues</th><th>Memory</th><th>Loops</th><th>BPM</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <ul id="rb_notes" class="rb-notes"></ul>
+    </section>
+  </main>
+
+  <!-- The XML download targets this instead of the top-level window; see /api/missing-log. -->
+  <iframe name="download_frame" style="display: none;"></iframe>
+  <script src="{{ url_for('static', filename='rekordbox_export.js') }}"></script>
+  <script src="{{ url_for('static', filename='rekordbox.js') }}"></script>
+</body>
+</html>
