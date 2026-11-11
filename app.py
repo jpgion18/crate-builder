@@ -11,8 +11,11 @@ from __future__ import annotations
 import io
 import json
 import os
+import secrets
 import sys
 import tempfile
+import threading
+import time
 import webbrowser
 from pathlib import Path
 from urllib.parse import urlencode
@@ -85,6 +88,30 @@ app = Flask(
 # Serato dir) is enough to avoid re-scanning the whole library on every
 # request.
 _LIBRARY_CACHE: dict[tuple[str, str], list] = {}
+
+# Files made by a form POST (Rekordbox XML, the CSV logs), waiting to be
+# fetched by GET /api/download/<token>. pywebview on macOS can't download a
+# POST response: it cancels the response, shows the Save dialog, then fetches
+# the same URL again with a plain GET (NSURLSession downloadTaskWithURL), which
+# drops the form body, so a POST-only route answered 405 and that error page
+# was saved under the .xml/.csv name. So each POST stores its file here and
+# redirects (303) to a GET URL that can be fetched more than once (the
+# webview's own request, then pywebview's re-fetch). Entries expire after
+# _DOWNLOAD_TTL_SECONDS.
+_DOWNLOADS: dict[str, tuple[bytes, str, float]] = {}
+_DOWNLOADS_LOCK = threading.Lock()
+_DOWNLOAD_TTL_SECONDS = 10 * 60
+
+
+def _download_redirect(data: bytes, filename: str):
+    """Store a file for GET /api/download/<token> and redirect the form POST there."""
+    now = time.time()
+    token = secrets.token_urlsafe(16)
+    with _DOWNLOADS_LOCK:
+        for key in [k for k, (_, _, created) in _DOWNLOADS.items() if now - created > _DOWNLOAD_TTL_SECONDS]:
+            del _DOWNLOADS[key]
+        _DOWNLOADS[token] = (data, filename, now)
+    return redirect(f"/api/download/{token}", code=303)
 
 # Pending "Log in with Showfile" attempts: state -> (code_verifier, redirect_uri).
 # In-memory is fine — single-user, single-process, and an entry only lives
@@ -634,11 +661,26 @@ def api_build_rekordbox():
         return jsonify(error=str(exc)), 400
 
     name = crate_name.split(">")[-1].strip()
+    return _download_redirect(xml_bytes, f"{serato_paths.sanitize_crate_name(name)[: -len('.crate')]} (Rekordbox).xml")
+
+
+@app.route("/api/download/<token>", methods=["GET"])
+def api_download(token):
+    """Serve a file stored by _download_redirect. GET, so pywebview's re-fetch works."""
+    with _DOWNLOADS_LOCK:
+        entry = _DOWNLOADS.get(token)
+    if entry is None or time.time() - entry[2] > _DOWNLOAD_TTL_SECONDS:
+        return jsonify(error="This download has expired. Export it again."), 404
+    data, filename, _ = entry
     return send_file(
-        io.BytesIO(xml_bytes),
-        mimetype="application/octet-stream",  # see /api/missing-log: forces the Save dialog
+        io.BytesIO(data),
+        # application/octet-stream, not text/csv or XML: pywebview's webview
+        # decides whether to download purely by MIME type (canShowMIMEType()
+        # on macOS) and ignores Content-Disposition, so a type it can render
+        # would just be shown inside the hidden download_frame instead.
+        mimetype="application/octet-stream",
         as_attachment=True,
-        download_name=f"{serato_paths.sanitize_crate_name(name)[: -len('.crate')]} (Rekordbox).xml",
+        download_name=filename,
     )
 
 
@@ -656,19 +698,7 @@ def api_missing_log():
     if not tracks:
         return jsonify(error="No missing tracks to log"), 400
 
-    csv_text = build_missing_log_csv(tracks)
-    return Response(
-        csv_text,
-        # application/octet-stream, not text/csv: pywebview's embedded webview
-        # decides whether to download or just navigate to a response purely by
-        # MIME type (WKWebView.canShowMIMEType() on macOS) — it never looks at
-        # Content-Disposition at all. "text/csv" is something the webview can
-        # render as plain text, so it was doing exactly that (silently, inside
-        # the hidden download_frame) regardless of ALLOW_DOWNLOADS. A MIME type
-        # the webview can't render forces the real Save dialog every time.
-        mimetype="application/octet-stream",
-        headers={"Content-Disposition": "attachment; filename=missing_tracks.csv"},
-    )
+    return _download_redirect(build_missing_log_csv(tracks).encode("utf-8"), "missing_tracks.csv")
 
 
 def _crate_node_json(node: CrateNode) -> dict:
@@ -750,12 +780,7 @@ def api_rekordbox_export():
     # One crate, or one crate plus its subcrates: name the file after it.
     tops = {c.split("%%")[0] for c in crates}
     name = crates[0].split("%%")[-1] if len(crates) == 1 else tops.pop() if len(tops) == 1 else "Serato crates"
-    return send_file(
-        io.BytesIO(xml_bytes),
-        mimetype="application/octet-stream",  # see /api/missing-log: forces the Save dialog
-        as_attachment=True,
-        download_name=f"{serato_paths.sanitize_crate_name(name)[: -len('.crate')]} (Rekordbox).xml",
-    )
+    return _download_redirect(xml_bytes, f"{serato_paths.sanitize_crate_name(name)[: -len('.crate')]} (Rekordbox).xml")
 
 
 @app.route("/api/spotify/year-genre", methods=["POST"])
@@ -810,14 +835,7 @@ def api_spotify_year_genre_log():
     if not tracks:
         return jsonify(error="No tracks to export"), 400
 
-    csv_text = build_year_genre_csv(tracks)
-    return Response(
-        csv_text,
-        # See /api/missing-log's comment — application/octet-stream forces an
-        # actual download instead of the webview rendering the CSV as text.
-        mimetype="application/octet-stream",
-        headers={"Content-Disposition": "attachment; filename=year_genre_breakdown.csv"},
-    )
+    return _download_redirect(build_year_genre_csv(tracks).encode("utf-8"), "year_genre_breakdown.csv")
 
 
 @app.route("/api/discover/preview", methods=["POST"])

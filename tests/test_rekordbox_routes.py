@@ -30,7 +30,7 @@ def _snapshot(root: Path) -> dict[str, str]:
 
 def _export(client, library: Library, crates: list[str], **extra: str):
     form = {"serato_dir": str(library.serato), "crates_json": json.dumps(crates), **extra}
-    return client.post("/api/rekordbox/export", data=form)
+    return client.post("/api/rekordbox/export", data=form, follow_redirects=True)
 
 
 @pytest.mark.parametrize("page", ["/", "/discover", "/community", "/library", "/myevents", "/settings", "/rekordbox"])
@@ -129,7 +129,7 @@ def test_build_crate_then_export(client, library: Library) -> None:
 
 def _build_rekordbox(client, tracks: list[dict], name: str = "Gigs > Friday", target: str = "rekordbox"):
     form = {"crate_name": name, "target": target, "tracks_json": json.dumps(tracks)}
-    return client.post("/api/build/rekordbox", data=form)
+    return client.post("/api/build/rekordbox", data=form, follow_redirects=True)
 
 
 def test_build_rekordbox_playlist_without_serato(client, library: Library) -> None:
