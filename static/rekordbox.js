@@ -184,7 +184,7 @@ $("rb_export_btn").addEventListener("click", async () => {
   try {
     const data = await window.rekordboxExport.exportCrates(exportRequest());
     renderReport(data, true);
-    setStatus($("rb_status"), "Choose where to save the XML file. Press ? for the Rekordbox import steps.");
+    setStatus($("rb_status"), `${window.crateDownload.describe(data.download, "the XML file")} Press ? for the Rekordbox import steps.`);
   } catch (err) {
     setStatus($("rb_status"), err.message, true);
   } finally {

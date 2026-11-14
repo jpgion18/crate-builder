@@ -180,3 +180,22 @@ def test_serato_folder_blank_when_missing(client, monkeypatch, tmp_path: Path) -
     monkeypatch.setattr(serato_paths, "guess_serato_dir", lambda: str(tmp_path / "no" / "_Serato_"))
     html = client.get("/").get_data(as_text=True)
     assert 'id="serato_dir" type="text" value=""' in html
+
+
+def test_export_as_the_app_does_it_yields_real_xml(client, library: Library) -> None:
+    """static/download.js's path: POST for a token, then fetch/save that file.
+
+    v0.9.10 on macOS saved a 153-byte "405 Method Not Allowed" page here.
+    """
+    import app as app_module
+
+    form = {"serato_dir": str(library.serato), "crates_json": json.dumps(["House", "House%%Deep"])}
+    res = client.post("/api/rekordbox/export", data=form, headers={"Accept": "application/json"})
+    assert res.status_code == 200, res.get_data(as_text=True)
+    body = res.get_json()
+    assert body["filename"] == "House (Rekordbox).xml"
+    data, _ = app_module.get_download(body["token"])
+    root = ET.fromstring(data)
+    assert validate_tree(root) == []
+    assert len(list(root.iterfind("COLLECTION/TRACK"))) > 0
+    assert client.get(body["url"]).get_data() == data

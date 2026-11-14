@@ -429,28 +429,11 @@ $("build_target").addEventListener("change", updateBuildLabel);
 updateBuildLabel();
 
 function downloadRekordboxPlaylist(crate_name, selected, target) {
-  // Same hidden-iframe <form> POST as downloadMissingLog() below, so the
-  // packaged app's webview shows a real Save dialog.
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = "/api/build/rekordbox";
-  form.target = "download_frame";
-  form.style.display = "none";
-  const fields = {
+  return window.crateDownload("/api/build/rekordbox", {
     crate_name,
     target,
     tracks_json: JSON.stringify(selected.map((t) => ({ path: t.path, title: t.title, artist: t.artist, album: t.album }))),
-  };
-  for (const [name, value] of Object.entries(fields)) {
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = name;
-    input.value = value;
-    form.appendChild(input);
-  }
-  document.body.appendChild(form);
-  form.submit();
-  form.remove();
+  });
 }
 
 async function buildCrate(overwrite = false) {
@@ -481,8 +464,9 @@ async function buildCrate(overwrite = false) {
       messages.push(`Crate written: ${data.path} (${data.track_count} tracks). Restart Serato (or rescan) to see it.`);
     }
     if (target !== "serato") {
-      downloadRekordboxPlaylist(crate_name, selected, target);
-      messages.push(`Rekordbox playlist: choose where to save the XML (${selected.length} tracks). Import steps are on the Rekordbox tab (press ?).`);
+      setStatus($("build_status"), [...messages, "Choose where to save the Rekordbox XML..."].join(" "));
+      const saved = await downloadRekordboxPlaylist(crate_name, selected, target);
+      messages.push(`Rekordbox playlist (${selected.length} tracks): ${window.crateDownload.describe(saved, "the XML")} Import steps are on the Rekordbox tab (press ?).`);
     }
     setStatus($("build_status"), messages.join(" "));
     if ($("community_publish").checked) {
@@ -503,7 +487,7 @@ async function buildCrate(overwrite = false) {
 
 $("build_btn").addEventListener("click", () => buildCrate(false));
 
-function downloadMissingLog() {
+async function downloadMissingLog() {
   const checkboxes = document.querySelectorAll('#results_table input[type="checkbox"]');
   const missing = [];
   checkboxes.forEach((cb) => {
@@ -518,32 +502,12 @@ function downloadMissingLog() {
     return;
   }
 
-  // A real <form> POST (not fetch()+blob+synthetic click), so the
-  // response's Content-Disposition: attachment header triggers a genuine
-  // browser/webview-native download. The packaged desktop app's embedded
-  // webview doesn't reliably handle a blob: URL clicked via JS — it just
-  // displays the raw CSV in place instead of downloading it. Submitting
-  // into the hidden "download_frame" iframe (rather than the top-level
-  // window) keeps that navigation contained there too, so even a webview
-  // that renders the CSV instead of downloading it does so off-screen —
-  // the main page, your matches, and your selections never move.
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = "/api/missing-log";
-  form.target = "download_frame";
-  form.style.display = "none";
-
-  const input = document.createElement("input");
-  input.type = "hidden";
-  input.name = "tracks_json";
-  input.value = JSON.stringify(missing);
-  form.appendChild(input);
-
-  document.body.appendChild(form);
-  form.submit();
-  form.remove();
-
-  setStatus($("build_status"), `Logged ${missing.length} missing track(s).`);
+  try {
+    const saved = await window.crateDownload("/api/missing-log", { tracks_json: JSON.stringify(missing) });
+    setStatus($("build_status"), `${missing.length} missing track(s): ${window.crateDownload.describe(saved, "the log")}`);
+  } catch (err) {
+    setStatus($("build_status"), err.message, true);
+  }
 }
 
 $("missing_log_btn").addEventListener("click", downloadMissingLog);
@@ -565,7 +529,8 @@ $("year_genre_btn").addEventListener("click", async () => {
     const data = await postJSON("/api/spotify/year-genre", { input_text });
     setStatus($("year_genre_status"), `Fetched ${data.count} track(s). Downloading...`);
     renderYearGenreBreakdown(data.breakdown);
-    downloadYearGenreCsv(data.tracks);
+    const saved = await downloadYearGenreCsv(data.tracks);
+    setStatus($("year_genre_status"), `Fetched ${data.count} track(s). ${window.crateDownload.describe(saved, "the breakdown")}`);
   } catch (err) {
     setStatus($("year_genre_status"), err.message, true);
   }
@@ -592,24 +557,7 @@ function renderYearGenreBreakdown(breakdown) {
 }
 
 function downloadYearGenreCsv(tracks) {
-  // Same hidden-iframe <form> POST pattern as downloadMissingLog() above —
-  // the data's already fetched, this step just turns it into a real
-  // native file download without navigating the main page.
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = "/api/spotify/year-genre-log";
-  form.target = "download_frame";
-  form.style.display = "none";
-
-  const input = document.createElement("input");
-  input.type = "hidden";
-  input.name = "tracks_json";
-  input.value = JSON.stringify(tracks);
-  form.appendChild(input);
-
-  document.body.appendChild(form);
-  form.submit();
-  form.remove();
+  return window.crateDownload("/api/spotify/year-genre-log", { tracks_json: JSON.stringify(tracks) });
 }
 
 $("sync_showfile_btn").addEventListener("click", async () => {
