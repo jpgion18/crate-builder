@@ -9,13 +9,15 @@ local development you can still run `python app.py` and use a browser.
 
 from __future__ import annotations
 
+import os
 import socket
 import threading
 import time
+from pathlib import Path
 
 import webview
 
-from app import app
+from app import app, get_download
 from crate_builder.myevents_poller import start_background_polling
 
 HOST = "127.0.0.1"
@@ -57,6 +59,45 @@ def _wait_until_up(port: int, timeout: float = 10.0) -> None:
     raise RuntimeError("Crate Builder's local server didn't start in time")
 
 
+class SaveApi:
+    """Exposed to the page as window.pywebview.api (see static/download.js).
+
+    Downloads are saved here instead of through the webview: pywebview on
+    macOS re-fetches a download URL on its own after showing the Save
+    dialog, and that kept saving a "405 Method Not Allowed" page in place of
+    the Rekordbox XML. Here the bytes come straight from app._DOWNLOADS.
+    """
+
+    def __init__(self) -> None:
+        # Underscore: pywebview exposes every public attribute to the page.
+        self._window: webview.Window | None = None
+
+    def save_download(self, token: str) -> dict:
+        entry = get_download(token)
+        if entry is None:
+            return {"error": "This download has expired. Export it again."}
+        data, filename = entry
+        if self._window is None:
+            return {"error": "The app window isn't ready yet. Try again."}
+
+        downloads = Path.home() / "Downloads"
+        chosen = self._window.create_file_dialog(
+            webview.SAVE_DIALOG,
+            directory=str(downloads) if downloads.is_dir() else "",
+            save_filename=filename,
+        )
+        # A str on macOS, a tuple on Windows, None/empty if cancelled.
+        if isinstance(chosen, (list, tuple)):
+            chosen = chosen[0] if chosen else None
+        if not chosen:
+            return {"cancelled": True}
+        try:
+            Path(chosen).write_bytes(data)
+        except OSError as exc:
+            return {"error": f"Couldn't save {os.path.basename(chosen)}: {exc}"}
+        return {"saved": str(chosen)}
+
+
 def main() -> None:
     port = _try_fixed_port() or _free_port()
     server = threading.Thread(
@@ -75,7 +116,10 @@ def main() -> None:
     # Downloads folder) on both macOS and Windows.
     webview.settings["ALLOW_DOWNLOADS"] = True
 
-    webview.create_window("Crate Builder", f"http://{HOST}:{port}", width=1100, height=850, min_size=(800, 600))
+    api = SaveApi()
+    api._window = webview.create_window(
+        "Crate Builder", f"http://{HOST}:{port}", js_api=api, width=1100, height=850, min_size=(800, 600)
+    )
     webview.start()
 
 

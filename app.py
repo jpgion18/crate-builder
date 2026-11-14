@@ -89,29 +89,57 @@ app = Flask(
 # request.
 _LIBRARY_CACHE: dict[tuple[str, str], list] = {}
 
-# Files made by a form POST (Rekordbox XML, the CSV logs), waiting to be
-# fetched by GET /api/download/<token>. pywebview on macOS can't download a
-# POST response: it cancels the response, shows the Save dialog, then fetches
-# the same URL again with a plain GET (NSURLSession downloadTaskWithURL), which
-# drops the form body, so a POST-only route answered 405 and that error page
-# was saved under the .xml/.csv name. So each POST stores its file here and
-# redirects (303) to a GET URL that can be fetched more than once (the
-# webview's own request, then pywebview's re-fetch). Entries expire after
-# _DOWNLOAD_TTL_SECONDS.
+# Files made by a download POST (Rekordbox XML, the CSV logs), waiting to be
+# saved. Each POST stores its file here under a random token and answers with
+# that token (JSON) when the page asks for one, or with a 303 redirect to
+# GET /api/download/<token> for a plain form POST.
+#
+# The packaged app saves the file itself (desktop_app.SaveApi.save_download:
+# a native Save dialog, then the bytes are written straight from here), so
+# nothing depends on the webview's download handling. That matters on macOS:
+# pywebview 5.3.2 cancels a download response and fetches the URL again on
+# its own with NSURLSession, and even with the 303 to a GET URL (v0.9.10),
+# exports on macOS were still saved as Flask's "405 Method Not Allowed" page.
+# A browser (python app.py) just loads GET /api/download/<token>.
+#
+# Entries expire after _DOWNLOAD_TTL_SECONDS.
 _DOWNLOADS: dict[str, tuple[bytes, str, float]] = {}
 _DOWNLOADS_LOCK = threading.Lock()
 _DOWNLOAD_TTL_SECONDS = 10 * 60
 
 
-def _download_redirect(data: bytes, filename: str):
-    """Store a file for GET /api/download/<token> and redirect the form POST there."""
+def _store_download(data: bytes, filename: str) -> str:
     now = time.time()
     token = secrets.token_urlsafe(16)
     with _DOWNLOADS_LOCK:
         for key in [k for k, (_, _, created) in _DOWNLOADS.items() if now - created > _DOWNLOAD_TTL_SECONDS]:
             del _DOWNLOADS[key]
         _DOWNLOADS[token] = (data, filename, now)
-    return redirect(f"/api/download/{token}", code=303)
+    return token
+
+
+def get_download(token: str) -> tuple[bytes, str] | None:
+    """The (bytes, filename) stored under token, or None if unknown or expired."""
+    with _DOWNLOADS_LOCK:
+        entry = _DOWNLOADS.get(token)
+    if entry is None or time.time() - entry[2] > _DOWNLOAD_TTL_SECONDS:
+        return None
+    return entry[0], entry[1]
+
+
+def _download_response(data: bytes, filename: str):
+    """Store a built file and tell the page how to get it.
+
+    static/download.js asks for JSON ({token, filename, url}) and then either
+    has the desktop app save it or loads url in the hidden download frame.
+    Anything else (an old-style form POST) gets a 303 to that same url.
+    """
+    token = _store_download(data, filename)
+    url = f"/api/download/{token}"
+    if "application/json" in request.headers.get("Accept", ""):
+        return jsonify(token=token, filename=filename, url=url)
+    return redirect(url, code=303)
+
 
 # Pending "Log in with Showfile" attempts: state -> (code_verifier, redirect_uri).
 # In-memory is fine — single-user, single-process, and an entry only lives
@@ -661,17 +689,16 @@ def api_build_rekordbox():
         return jsonify(error=str(exc)), 400
 
     name = crate_name.split(">")[-1].strip()
-    return _download_redirect(xml_bytes, f"{serato_paths.sanitize_crate_name(name)[: -len('.crate')]} (Rekordbox).xml")
+    return _download_response(xml_bytes, f"{serato_paths.sanitize_crate_name(name)[: -len('.crate')]} (Rekordbox).xml")
 
 
 @app.route("/api/download/<token>", methods=["GET"])
 def api_download(token):
-    """Serve a file stored by _download_redirect. GET, so pywebview's re-fetch works."""
-    with _DOWNLOADS_LOCK:
-        entry = _DOWNLOADS.get(token)
-    if entry is None or time.time() - entry[2] > _DOWNLOAD_TTL_SECONDS:
+    """Serve a file stored by _download_response. GET, so it can be fetched more than once."""
+    entry = get_download(token)
+    if entry is None:
         return jsonify(error="This download has expired. Export it again."), 404
-    data, filename, _ = entry
+    data, filename = entry
     return send_file(
         io.BytesIO(data),
         # application/octet-stream, not text/csv or XML: pywebview's webview
@@ -698,7 +725,7 @@ def api_missing_log():
     if not tracks:
         return jsonify(error="No missing tracks to log"), 400
 
-    return _download_redirect(build_missing_log_csv(tracks).encode("utf-8"), "missing_tracks.csv")
+    return _download_response(build_missing_log_csv(tracks).encode("utf-8"), "missing_tracks.csv")
 
 
 def _crate_node_json(node: CrateNode) -> dict:
@@ -780,7 +807,7 @@ def api_rekordbox_export():
     # One crate, or one crate plus its subcrates: name the file after it.
     tops = {c.split("%%")[0] for c in crates}
     name = crates[0].split("%%")[-1] if len(crates) == 1 else tops.pop() if len(tops) == 1 else "Serato crates"
-    return _download_redirect(xml_bytes, f"{serato_paths.sanitize_crate_name(name)[: -len('.crate')]} (Rekordbox).xml")
+    return _download_response(xml_bytes, f"{serato_paths.sanitize_crate_name(name)[: -len('.crate')]} (Rekordbox).xml")
 
 
 @app.route("/api/spotify/year-genre", methods=["POST"])
@@ -835,7 +862,7 @@ def api_spotify_year_genre_log():
     if not tracks:
         return jsonify(error="No tracks to export"), 400
 
-    return _download_redirect(build_year_genre_csv(tracks).encode("utf-8"), "year_genre_breakdown.csv")
+    return _download_response(build_year_genre_csv(tracks).encode("utf-8"), "year_genre_breakdown.csv")
 
 
 @app.route("/api/discover/preview", methods=["POST"])
