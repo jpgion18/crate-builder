@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crate Builder Guides</title>
+<meta name="description" content="Step-by-step guides for every Crate Builder feature, from building a crate to moving Serato crates to Rekordbox.">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<nav class="site-nav">
+  <a href="index.html" class="brand"><img src="logo.png" alt="">Crate Builder</a>
+  <a href="guide.html" aria-current="page">Guides</a>
+  <a href="index.html#faq">FAQ</a>
+  <a href="https://github.com/jpgion18/crate-builder">GitHub</a>
+</nav>
+<main class="wrap">
+
+<header class="stack">
+  <div class="eyebrow">Guides</div>
+  <h1>Crate Builder Guides</h1>
+  <p class="lede">Step-by-step instructions for each thing Crate Builder does. Start with setup, then jump to the job you need.</p>
+  <nav class="toc" aria-label="Guides">
+    <a href="#setup">Install and set up</a>
+    <a href="#build-a-crate">Turn a request list into a crate</a>
+    <a href="#serato-to-rekordbox">Move Serato crates to Rekordbox</a>
+    <a href="#year-genre">See what era and genre a playlist is</a>
+    <a href="#discover">Find new music from other DJs' sets</a>
+    <a href="#library-cleanup">Clean up your library</a>
+    <a href="#showfile">Sync with Showfile (optional)</a>
+    <a href="#features">All features</a>
+  </nav>
+</header>
+
+<section class="stack" id="setup">
+  <div class="eyebrow">Before your first crate</div>
+  <h2>Install and set up</h2>
+  <ol class="steps">
+    <li>Download <code>CrateBuilder-macos.zip</code> or <code>CrateBuilder-windows.zip</code> from the <a href="https://github.com/jpgion18/crate-builder/releases/latest">latest release</a> and unzip it.</li>
+    <li>Open it the first time past the security warning. The app isn't signed by Apple or Microsoft yet.
+      <br><strong>Mac:</strong> right-click <code>CrateBuilder.app</code>, choose <em>Open</em>, then <em>Open</em> again.
+      <br><strong>Windows:</strong> on the blue SmartScreen box, click <em>More info</em>, then <em>Run anyway</em>.</li>
+    <li>On the main <strong>Crate Builder</strong> tab, set your <strong>Music library folder</strong> (it starts at your Music folder) and click <strong>Scan Library</strong>.</li>
+    <li>Serato users: set the <strong>Serato folder</strong> to the one that contains <code>_Serato_</code>. If your music is on an external drive, it's usually on that drive. Rekordbox-only DJs can leave it empty.</li>
+    <li>Want to paste Spotify playlists? Click <strong>Connect Spotify</strong> once and log in. No developer account or keys needed.</li>
+  </ol>
+  <p class="note"><strong>Back up your <code>_Serato_</code> folder</strong> before your first build. Crate Builder only adds new crates and asks before replacing one with the same name, but a backup costs nothing.</p>
+</section>
+
+<section class="stack">
+  <div class="eyebrow">By objective</div>
+  <h2>What you can do</h2>
+  <div class="pads">
+
+    <article class="pad" id="build-a-crate">
+      <div class="cue" style="--c: var(--cue-a)" aria-hidden="true">A</div>
+      <div class="body">
+        <h3>Turn a request list into a crate</h3>
+        <p>For a couple's must-play list, a client's Spotify playlist, or a list someone texted you.</p>
+        <ol>
+          <li>Type a crate name. Use <code>Weddings &gt; Smith</code> to put it inside an existing crate.</li>
+          <li>Paste the list and click <strong>Preview Matches</strong>. It accepts a CSV, a Spotify playlist link, a public Dropbox or Google Drive/Docs/Sheets link, or plain lines like <code>Artist - Title</code> or <code>Title by Artist</code>.</li>
+          <li>Check the table. Press ▶ to listen to a match. Rows marked <em>ambiguous</em> show the close versions (remixes, edits) so you pick one. Use <strong>Find match</strong> on anything it missed, and <strong>+ Add another version</strong> to add two edits of one song.</li>
+          <li>Pick <strong>Build for</strong>: Serato crate, Rekordbox playlist, or both. Click <strong>Build</strong>.</li>
+          <li>Serato: restart it or rescan to see the crate. Rekordbox: save the XML and import it (see <a href="#serato-to-rekordbox">Serato to Rekordbox</a>).</li>
+        </ol>
+        <p>Click <strong>Missing Tracks Log</strong> to save a CSV of everything you don't own yet, as a shopping list.</p>
+        <div class="where">Tab: Crate Builder</div>
+      </div>
+    </article>
+
+
+    <article class="pad" id="serato-to-rekordbox">
+      <div class="cue" style="--c: var(--cue-b)" aria-hidden="true">B</div>
+      <div class="body">
+        <h3>Move Serato crates to Rekordbox</h3>
+        <p>Brings over hot cues, memory cues, saved loops and beatgrids, so you can play a Rekordbox setup or a club USB.</p>
+        <ol>
+          <li>Open the <strong>Rekordbox</strong> tab and tick the crates to convert. Ticking a crate also ticks the crates inside it.</li>
+          <li>Click <strong>Preview</strong> to see every track's cues, loops and BPM, plus anything that won't carry over. Nothing is saved yet.</li>
+          <li>Click <strong>Export to Rekordbox</strong> and save the XML file.</li>
+          <li>In Rekordbox, go to Settings › View › Layout and turn on <em>rekordbox xml</em>.</li>
+          <li>Go to Settings › Advanced › Database › rekordbox xml, click <em>Browse</em>, and choose the file.</li>
+          <li>In the sidebar, open <em>rekordbox xml › Playlists</em>, right-click a playlist, and choose <em>Import Playlist</em>.</li>
+          <li>For a USB stick, plug it in and drag the imported playlist onto it in Rekordbox, as you would with any playlist.</li>
+        </ol>
+        <p>The <strong>?</strong> button on the tab shows these steps too. Your Serato library and music files are only read, never changed.</p>
+        <div class="where">Tab: Rekordbox</div>
+      </div>
+    </article>
+
+
+    <article class="pad" id="year-genre">
+      <div class="cue" style="--c: var(--cue-c)" aria-hidden="true">C</div>
+      <div class="body">
+        <h3>See what era and genre a playlist is</h3>
+        <p>Paste a client's Spotify playlist and click <strong>Get Year/Genre Breakdown</strong>. You get a count per decade and per genre on screen, plus a CSV with every track. It's a quick way to see whether a couple's list leans 80s, 2000s hip-hop or current pop before you plan the rest of the night.</p>
+        <div class="where">Tab: Crate Builder · needs Spotify connected</div>
+      </div>
+    </article>
+
+
+    <article class="pad" id="discover">
+      <div class="cue" style="--c: var(--cue-d)" aria-hidden="true">D</div>
+      <div class="body">
+        <h3>Find new music from other DJs' sets</h3>
+        <p>Paste a tracklist from 1001tracklists, a Beatport chart, a Mixcloud or SoundCloud description, or a Spotify playlist, and label where it came from. Anything you don't already own goes into your <strong>Discovery Log</strong>, a running to-check list. Mark entries as acquired or dismissed, export it to CSV, or tick some and click <strong>Build a Crate from Selected</strong>.</p>
+        <p><strong>Sources</strong> keeps bookmarks of where you dig, sorted by gig type: Wedding, Brunch, Happy Hour, Club Open and General.</p>
+        <div class="where">Tab: Discover</div>
+      </div>
+    </article>
+
+
+    <article class="pad" id="library-cleanup">
+      <div class="cue" style="--c: var(--cue-e)" aria-hidden="true">E</div>
+      <div class="body">
+        <h3>Clean up your library</h3>
+        <ul class="plain">
+          <li><strong>Duplicate finder</strong> reads Serato's own database and groups likely duplicates, with each file's path, year, key and pool. It never deletes anything; you remove files yourself after checking.</li>
+          <li><strong>Year check</strong> compares your year tags to MusicBrainz and flags mismatches. It checks about one track a second, so run big libraries in batches. It remembers where it stopped.</li>
+          <li><strong>Metadata editor</strong> fixes title, artist, album, genre, year and track number. It backs up the file before every save, and <strong>Recent backups</strong> restores any version in one click.</li>
+        </ul>
+        <div class="where">Tab: Library Tools</div>
+      </div>
+    </article>
+
+
+    <article class="pad" id="showfile">
+      <div class="cue" style="--c: var(--cue-f)" aria-hidden="true">F</div>
+      <div class="body">
+        <h3>Sync with Showfile (optional)</h3>
+        <p>For DJs who run their gigs on Showfile. Log in from <strong>Settings</strong> and you get <strong>MyEvents</strong>, which pulls the songs couples add to their timelines and matches them in one click. You also get <strong>Sync to Showfile</strong>, which sends a finished crate back to an event, and <strong>Community</strong>, a feed of crate track lists shared by other DJs. Every other guide works without it.</p>
+        <div class="where">Tabs: MyEvents, Community, Settings</div>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<section class="stack" id="features">
+  <div class="eyebrow">Everything in one table</div>
+  <h2>Feature list</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Tab</th><th>Feature</th><th>What it gives you</th><th>Needs</th></tr></thead>
+      <tbody>
+        <tr><td>Crate Builder</td><td>Match &amp; build</td><td>A Serato crate and/or Rekordbox playlist from a pasted list</td><td><span class="tag free">nothing</span></td></tr>
+        <tr><td></td><td>Spotify playlists</td><td>Paste a playlist link directly</td><td><span class="tag">Spotify login</span></td></tr>
+        <tr><td></td><td>Preview player</td><td>Listen to any match before you commit</td><td><span class="tag free">nothing</span></td></tr>
+        <tr><td></td><td>Missing Tracks Log</td><td>CSV of songs you don't own</td><td><span class="tag free">nothing</span></td></tr>
+        <tr><td></td><td>Year/Genre Breakdown</td><td>Decade and genre counts plus a CSV</td><td><span class="tag">Spotify login</span></td></tr>
+        <tr><td>Rekordbox</td><td>Crate export</td><td>Serato crates as a Rekordbox XML, with cues, loops and grids</td><td><span class="tag">Serato library</span></td></tr>
+        <tr><td>Discover</td><td>Discovery Log</td><td>A to-check list of tracks from other DJs' sets</td><td><span class="tag free">nothing</span></td></tr>
+        <tr><td></td><td>Sources</td><td>Bookmarks of where you dig, by gig type</td><td><span class="tag free">nothing</span></td></tr>
+        <tr><td>Library Tools</td><td>Duplicate finder</td><td>Groups of likely duplicate tracks</td><td><span class="tag">Serato library</span></td></tr>
+        <tr><td></td><td>Year check</td><td>Year tags that disagree with MusicBrainz</td><td><span class="tag">internet</span></td></tr>
+        <tr><td></td><td>Metadata editor</td><td>Tag edits, with a backup before every save</td><td><span class="tag free">nothing</span></td></tr>
+        <tr><td>MyEvents</td><td>Couple requests</td><td>Songs from your Showfile events, ready to match</td><td><span class="tag opt">Showfile</span></td></tr>
+        <tr><td>Community</td><td>Shared crates</td><td>Browse and publish crate track lists</td><td><span class="tag opt">Showfile</span></td></tr>
+        <tr><td>Settings</td><td>Update check</td><td>A <em>Download update</em> button when a new version is out</td><td><span class="tag free">nothing</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<p>More questions? See the <a href="index.html#faq">FAQ</a>.</p>
+
+<footer>Crate Builder is a free app that runs on your own computer. Found a bug? Use <strong>Copy report</strong> on the Rekordbox tab, or describe what you did, and <a href="https://github.com/jpgion18/crate-builder/issues">open an issue on GitHub</a>.</footer>
+
+</main>
+</body>
+</html>
