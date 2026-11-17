@@ -33,7 +33,7 @@ def _export(client, library: Library, crates: list[str], **extra: str):
     return client.post("/api/rekordbox/export", data=form, follow_redirects=True)
 
 
-@pytest.mark.parametrize("page", ["/", "/discover", "/community", "/library", "/myevents", "/settings", "/rekordbox"])
+@pytest.mark.parametrize("page", ["/", "/discover", "/community", "/library", "/myevents", "/settings", "/rekordbox", "/guide"])
 def test_every_page_links_to_the_tab(client, page: str) -> None:
     html = client.get(page).get_data(as_text=True)
     assert 'href="/rekordbox"' in html
@@ -180,3 +180,13 @@ def test_serato_folder_blank_when_missing(client, monkeypatch, tmp_path: Path) -
     monkeypatch.setattr(serato_paths, "guess_serato_dir", lambda: str(tmp_path / "no" / "_Serato_"))
     html = client.get("/").get_data(as_text=True)
     assert 'id="serato_dir" type="text" value=""' in html
+
+
+@pytest.mark.parametrize("page", ["/", "/discover", "/community", "/library", "/myevents", "/settings", "/rekordbox"])
+def test_every_page_links_to_the_guide(client, page: str) -> None:
+    assert 'href="/guide"' in client.get(page).get_data(as_text=True)
+
+
+def test_guide_page(client) -> None:
+    html = client.get("/guide").get_data(as_text=True)
+    assert "Quick Reference" in html and "Import Playlist" in html

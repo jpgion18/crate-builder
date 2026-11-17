@@ -233,6 +233,11 @@ def myevents_page():
     return render_template("myevents.html")
 
 
+@app.route("/guide")
+def guide_page():
+    return render_template("guide.html")
+
+
 @app.route("/settings")
 def settings_page():
     return render_template("settings.html")

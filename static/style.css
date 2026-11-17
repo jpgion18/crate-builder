@@ -443,3 +443,12 @@ body.has-preview-player main { padding-bottom: 4.5rem; }
 .field input[type="number"] { width: 90px; }
 #rb_table td.num { text-align: right; }
 .rb-notes { color: var(--muted); font-size: 0.85rem; padding-left: 1.2rem; }
+
+/* Guide tab (templates/guide.html) */
+.guide ol, .guide ul { margin: 0.5rem 0 0; padding-left: 1.3rem; display: grid; gap: 0.35rem; line-height: 1.5; }
+.guide h2 { margin: 0 0 0.25rem; font-size: 1.1rem; }
+.guide p { line-height: 1.5; margin: 0.4rem 0 0; }
+.guide main a, .guide .panel a, .guide .subtitle a { color: var(--accent); }
+.guide code { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0 0.3rem; font-size: 0.9em; }
+.guide .guide-where { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin: 0; }
+.guide-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 1.5rem; }
