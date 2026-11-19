@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}" />
+  <title>Guide - Crate Builder</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <main class="guide">
+    <nav class="top-nav">
+      <a href="/" class="brand"><img src="{{ url_for('static', filename='logo.png') }}" alt="" class="brand-logo" />Crate Builder</a>
+      <a href="/myevents">MyEvents</a>
+      <a href="/discover">Discover</a>
+      <a href="/community">Community</a>
+      <a href="/library">Library Tools</a>
+      <a href="/rekordbox">Rekordbox</a>
+      <a href="/guide" class="active">Guide</a>
+      <a href="/settings">Settings</a>
+    </nav>
+    <h1>Quick Reference</h1>
+    <p class="subtitle">
+      The short version of every feature. Full step-by-step guides and the FAQ are on the
+      <a href="https://jpgion18.github.io/crate-builder/guide.html" target="_blank" rel="noopener">Crate Builder website</a>.
+    </p>
+
+    <section class="panel">
+      <h2>First time</h2>
+      <ol>
+        <li>On <a href="/">Crate Builder</a>, set your <strong>Music library folder</strong> and click <strong>Scan Library</strong>.</li>
+        <li>Serato users: set the <strong>Serato folder</strong> to the one containing <code>_Serato_</code> (on the external drive if your music lives there). Rekordbox-only DJs can leave it empty.</li>
+        <li>For Spotify playlists, click <strong>Connect Spotify</strong> once.</li>
+        <li>Back up your <code>_Serato_</code> folder before your first build.</li>
+      </ol>
+    </section>
+
+    <section class="panel">
+      <h2>Build a crate from a list</h2>
+      <p class="guide-where">Crate Builder tab</p>
+      <ol>
+        <li>Name the crate. <code>Weddings &gt; Smith</code> puts it inside an existing crate.</li>
+        <li>Paste a CSV, a Spotify playlist link, a public Dropbox/Google link, or <code>Artist - Title</code> lines. Click <strong>Preview Matches</strong>.</li>
+        <li>Check the table. Press ▶ to listen, pick a version on <em>ambiguous</em> rows, use <strong>Find match</strong> for misses, and <strong>+ Add another version</strong> for a second edit.</li>
+        <li>Choose <strong>Build for</strong> (Serato, Rekordbox, or both) and click <strong>Build</strong>. In Serato, restart or rescan to see it.</li>
+      </ol>
+      <p class="subtitle">Also on this tab: <strong>Missing Tracks Log</strong> (a CSV of songs you don't own) and <strong>Year/Genre Breakdown</strong> for a Spotify playlist.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Serato crates to Rekordbox and USB</h2>
+      <p class="guide-where">Rekordbox tab</p>
+      <ol>
+        <li>Tick crates, click <strong>Preview</strong> to check cues and loops, then <strong>Export to Rekordbox</strong> and save the XML.</li>
+        <li>In Rekordbox: Settings › View › Layout, turn on <em>rekordbox xml</em>.</li>
+        <li>Settings › Advanced › Database › rekordbox xml: <em>Browse</em> to the saved file.</li>
+        <li>In the sidebar, open <em>rekordbox xml › Playlists</em>, right-click a playlist and choose <em>Import Playlist</em>.</li>
+        <li>Plug in your USB and drag the playlist onto it.</li>
+      </ol>
+    </section>
+
+    <div class="guide-grid">
+      <section class="panel">
+        <h2>Find new music</h2>
+        <p class="guide-where">Discover tab</p>
+        <p>Paste another DJ's tracklist and tag where it came from. Tracks you don't own go into the <strong>Discovery Log</strong>, and you can build a crate from selected entries anytime.</p>
+      </section>
+      <section class="panel">
+        <h2>Clean up your library</h2>
+        <p class="guide-where">Library Tools tab</p>
+        <p><strong>Duplicate finder</strong> (finds, never deletes), <strong>Year check</strong> against MusicBrainz, and a <strong>Metadata editor</strong> that backs up every file before saving.</p>
+      </section>
+      <section class="panel">
+        <h2>Showfile (optional)</h2>
+        <p class="guide-where">Settings, MyEvents, Community</p>
+        <p>Log in from Settings to pull couples' requests into <strong>MyEvents</strong>, sync crates back to events, and browse the <strong>Community</strong> feed.</p>
+      </section>
+      <section class="panel">
+        <h2>Updates</h2>
+        <p class="guide-where">Settings tab</p>
+        <p>A <strong>Download update</strong> button appears when a new version is out. Unzip it and replace the old app.</p>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>If something's off</h2>
+      <ul>
+        <li><strong>A song didn't match:</strong> use <strong>Find match</strong>, or lower <strong>Match sensitivity</strong> a little.</li>
+        <li><strong>The crate isn't in Serato:</strong> restart or rescan, and check the Serato folder is the one Serato uses.</li>
+        <li><strong>Rekordbox can't read the XML:</strong> update Crate Builder and export again.</li>
+        <li><strong>Cues are in the wrong place:</strong> tracks already in Rekordbox may keep their old cues. For MP3s, try <strong>MP3 cue shift</strong>.</li>
+        <li><strong>Reporting a bug:</strong> click <strong>Copy report</strong> on the Rekordbox tab and send it along.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crate Builder</title>
+<meta name="description" content="Free app for DJs: turn request lists and Spotify playlists into Serato crates and Rekordbox playlists, and move Serato crates to Rekordbox with cues and loops.">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<nav class="site-nav">
+  <a href="index.html" class="brand"><img src="logo.png" alt="">Crate Builder</a>
+  <a href="guide.html">Guides</a>
+  <a href="index.html#faq">FAQ</a>
+  <a href="https://github.com/jpgion18/crate-builder">GitHub</a>
+</nav>
+<main class="wrap">
+
+<header class="hero">
+  <div class="stack">
+    <div class="eyebrow">For DJs · Mac &amp; Windows · Free</div>
+    <h1>Crate Builder</h1>
+    <p class="lede">Paste a request list, a Spotify playlist or a tracklist. Crate Builder finds those songs in your own music folder and builds a Serato crate, a Rekordbox playlist, or both. It also moves your Serato crates into Rekordbox with their cues and loops.</p>
+    <div class="ctas">
+      <a class="btn" href="https://github.com/jpgion18/crate-builder/releases/latest/download/CrateBuilder-macos.zip">Download for Mac</a>
+      <a class="btn secondary" href="https://github.com/jpgion18/crate-builder/releases/latest/download/CrateBuilder-windows.zip">Download for Windows</a>
+    </div>
+    <p class="small">Unzip it and open the app. First time? See <a href="guide.html#setup">Install and set up</a>.</p>
+  </div>
+  <img src="logo.png" alt="">
+</header>
+
+<section class="stats" aria-label="Crate Builder at a glance">
+  <div class="stat"><b>7</b><span>tabs, each for one job</span></div>
+  <div class="stat"><b>4</b><span>kinds of track list it reads</span></div>
+  <div class="stat"><b>2</b><span>DJ apps it builds for: Serato and Rekordbox</span></div>
+  <div class="stat"><b>0</b><span>changes to your existing crates</span></div>
+</section>
+
+<section class="stack">
+  <div class="eyebrow">Guides</div>
+  <h2>What do you want to do?</h2>
+  <div class="cards">
+    <a class="card" href="guide.html#build-a-crate">
+      <div class="cue" style="--c: var(--cue-a)" aria-hidden="true">A</div>
+      <div><h3>Turn a request list into a crate</h3><p>Paste a list or Spotify playlist and get a Serato crate, a Rekordbox playlist, or both.</p></div>
+    </a>
+    <a class="card" href="guide.html#serato-to-rekordbox">
+      <div class="cue" style="--c: var(--cue-b)" aria-hidden="true">B</div>
+      <div><h3>Move Serato crates to Rekordbox</h3><p>Hot cues, memory cues, loops and beatgrids, ready for a club USB.</p></div>
+    </a>
+    <a class="card" href="guide.html#year-genre">
+      <div class="cue" style="--c: var(--cue-c)" aria-hidden="true">C</div>
+      <div><h3>See what era and genre a playlist is</h3><p>Decade and genre counts for a client's Spotify playlist.</p></div>
+    </a>
+    <a class="card" href="guide.html#discover">
+      <div class="cue" style="--c: var(--cue-d)" aria-hidden="true">D</div>
+      <div><h3>Find new music from other DJs' sets</h3><p>Keep a to-check list of tracks you don't own yet.</p></div>
+    </a>
+    <a class="card" href="guide.html#library-cleanup">
+      <div class="cue" style="--c: var(--cue-e)" aria-hidden="true">E</div>
+      <div><h3>Clean up your library</h3><p>Find duplicates, check year tags, and fix tags safely.</p></div>
+    </a>
+    <a class="card" href="guide.html#showfile">
+      <div class="cue" style="--c: var(--cue-f)" aria-hidden="true">F</div>
+      <div><h3>Sync with Showfile (optional)</h3><p>Pull couples' requests from your Showfile events.</p></div>
+    </a>
+  </div>
+  <p><a href="guide.html#features">See every feature in one table</a></p>
+</section>
+
+<section class="stack">
+  <div class="eyebrow">Your files stay yours</div>
+  <h2>What it touches, and what it doesn't</h2>
+  <div class="twocol">
+    <div class="stack">
+      <h3>Writes</h3>
+      <ul class="plain">
+        <li>New <code>.crate</code> files in your Serato Subcrates folder</li>
+        <li>XML and CSV files, only where you choose to save them</li>
+        <li>Your music files, only when you save in the Metadata editor (backed up first)</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>Never touches</h3>
+      <ul class="plain">
+        <li>Your existing crates or Serato's main database</li>
+        <li>Your Rekordbox library. You import the XML yourself.</li>
+        <li>Any file during Rekordbox export, duplicate finding or year checks</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note"><strong>Back up your <code>_Serato_</code> folder</strong> before your first build. Crate Builder only adds new crates and asks before replacing one with the same name, but a backup costs nothing.</p>
+</section>
+
+<section class="stack" id="faq">
+  <div class="eyebrow">Questions</div>
+  <h2>FAQ</h2>
+  <div>
+    <details>
+      <summary>Is it free?</summary>
+      <p>Yes. Everything in the guides is free. The only extras are MyEvents, Sync to Showfile and Community, which need a Showfile account.</p>
+    </details>
+    <details>
+      <summary>Does it upload my music or my library?</summary>
+      <p>No. Matching and building happen on your computer. It only goes online to read a Spotify playlist or a shared Dropbox/Google link you paste in, to check MusicBrainz during a Year check, and once a day to see whether a new version is out.</p>
+    </details>
+    <details>
+      <summary>Do I need Serato?</summary>
+      <p>No. Rekordbox-only DJs can build Rekordbox playlists straight from a pasted list and leave the Serato folder empty. You need Serato only to build Serato crates, convert crates to Rekordbox, or use the Duplicate finder.</p>
+    </details>
+    <details>
+      <summary>Do I need a Spotify account?</summary>
+      <p>Only to paste Spotify playlist links or use the Year/Genre Breakdown. Click <strong>Connect Spotify</strong> and log in once. CSVs, shared links and plain track lists work without it.</p>
+    </details>
+    <details>
+      <summary>My Mac or PC says the app is from an unknown developer</summary>
+      <p>The app isn't signed by Apple or Microsoft yet. On a Mac, right-click <code>CrateBuilder.app</code>, choose <em>Open</em>, then <em>Open</em> again. On Windows, click <em>More info</em>, then <em>Run anyway</em>. You only do this the first time.</p>
+    </details>
+    <details>
+      <summary>How do I update?</summary>
+      <p>Settings shows a <strong>Download update</strong> button when a new version is out. Unzip the download and replace the old app. Your settings and logs are kept.</p>
+    </details>
+    <details>
+      <summary>A song is in my library but it didn't match</summary>
+      <p>Click <strong>Find match</strong> on that row and search by any word in the title or artist. If lots of songs miss, lower <strong>Match sensitivity</strong> a little. Messy file tags also hurt matching, and the Metadata editor fixes those.</p>
+    </details>
+    <details>
+      <summary>My new crate doesn't show up in Serato</summary>
+      <p>Restart Serato or rescan. Also check the Serato folder points at the <code>_Serato_</code> folder Serato actually uses. With music on an external drive, that's often the one on the drive.</p>
+    </details>
+    <details>
+      <summary>Rekordbox says it can't read the XML</summary>
+      <p>Update to the newest Crate Builder from Settings and export again. Some older versions on Mac saved an error page instead of the playlist.</p>
+    </details>
+    <details>
+      <summary>My cues are in the wrong place in Rekordbox</summary>
+      <p>Songs already in your Rekordbox collection may keep their old cues. Some MP3s can also be a few milliseconds off between the two apps; the <strong>MP3 cue shift</strong> option adjusts for that. A track whose tempo changes partway through keeps only its first beatgrid marker, and the Preview report points these out.</p>
+    </details>
+    <details>
+      <summary>What doesn't carry over to Rekordbox</summary>
+      <p>Smart Crates aren't read. Cue colors come across but Rekordbox snaps them to its own palette. The Preview report lists anything else, such as missing files.</p>
+    </details>
+  </div>
+</section>
+
+<footer>Crate Builder is a free app that runs on your own computer. Found a bug? Use <strong>Copy report</strong> on the Rekordbox tab, or describe what you did, and <a href="https://github.com/jpgion18/crate-builder/issues">open an issue on GitHub</a>.</footer>
+
+</main>
+</body>
+</html>
