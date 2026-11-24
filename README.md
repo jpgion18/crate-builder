@@ -116,10 +116,21 @@ crate:
   separate library folder for this part. Groups tracks that look like the
   same song: exact matches after normalizing case/punctuation/noise words,
   plus close variants (like a missing featured-artist credit) that share
-  the same title. It only *finds* duplicates and shows you each file's
-  path plus its year/key/energy/pool-source — nothing gets deleted
-  automatically. Remove files yourself in Finder/Explorer once you've
-  reviewed a group.
+  the same title, and shows each file's path, year/key/energy/pool-source,
+  size and how many crates it's in.
+- **Duplicate cleanup** — tick the groups to fix and pick the copy to keep
+  in each (a best guess is preselected). Crate Builder then removes the
+  other copies from Serato's `database V2`, points every crate that had a
+  removed copy at the kept copy instead (so no crate loses a song), and
+  either moves the removed files to `~/Crate Builder Removed Duplicates/`
+  or leaves them on disk. Nothing is ever deleted outright. Before each
+  run it backs up `database V2` and every `.crate` to
+  `~/.crate_builder/serato_backups/`, and **Past cleanups** undoes any run
+  (library, crates and moved files). Quit Serato DJ first: it saves its
+  library on quit and would overwrite the cleanup. It refuses to run while
+  it can see Serato open. Only the `_Serato_` folder you point it at is
+  edited, so tracks on an external drive that has its own `_Serato_`
+  folder aren't touched.
 - **Year check** — cross-checks each track's tagged year against
   MusicBrainz, since Serato's own year tags aren't always reliable. This is
   a review tool, not an auto-corrector — nothing gets written back on its

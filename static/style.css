@@ -146,6 +146,14 @@ button.secondary {
 
 .hidden { display: none; }
 
+button.danger { background: var(--danger); color: #fff; }
+
+.dupe-row { white-space: normal; display: flex; gap: 0.6rem; align-items: baseline; padding: 0.25rem 0; }
+.dupe-row .dupe-path { font-family: ui-monospace, monospace; font-size: 0.85rem; word-break: break-all; }
+.dupe-row .dupe-meta { color: var(--muted); font-size: 0.8rem; }
+.dupe-row.removing .dupe-path { text-decoration: line-through; color: var(--muted); }
+.crate-header label { cursor: pointer; }
+
 label.inline {
   font-size: 0.85rem;
   color: var(--muted);
