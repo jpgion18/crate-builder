@@ -32,6 +32,16 @@ from crate_builder.community_client import (
     publish_crate,
 )
 from crate_builder.duplicates import find_duplicates
+from crate_builder.serato_dedupe import (
+    DedupeError,
+    RemovalPlan,
+    crate_counts,
+    list_serato_backups,
+    remove_duplicates,
+    removed_duplicates_folder,
+    restore_serato_backup,
+    suggest_keep,
+)
 from crate_builder.input_parser import parse_input_text
 from crate_builder.library import apply_serato_metadata, scan_library
 from crate_builder.link_fetcher import LinkFetchError, fetch_tracklist_text, is_shared_link
@@ -491,28 +501,80 @@ def api_duplicates():
         return jsonify(error=str(exc)), 400
 
     groups = find_duplicates(tracks)
-    return jsonify(
-        groups=[
-            {
-                "reason": g.reason,
-                "tracks": [
-                    {
-                        "path": t.path,
-                        "artist": t.artist,
-                        "title": t.title,
-                        "album": t.album,
-                        "year": t.year,
-                        "key": t.key,
-                        "energy": t.energy,
-                        "source": t.source,
-                        "bpm": t.bpm,
-                    }
-                    for t in g.tracks
-                ],
-            }
-            for g in groups
+    counts = crate_counts(os.path.expanduser(serato_dir))
+
+    def _track_json(t):
+        key = os.path.normcase(os.path.normpath(t.path)) if t.path else ""
+        exists = bool(t.path) and os.path.isfile(t.path)
+        return {
+            "path": t.path,
+            "artist": t.artist,
+            "title": t.title,
+            "album": t.album,
+            "year": t.year,
+            "key": t.key,
+            "energy": t.energy,
+            "source": t.source,
+            "bpm": t.bpm,
+            "exists": exists,
+            "file_size": os.path.getsize(t.path) if exists else None,
+            "crate_count": counts.get(key, 0),
+        }
+
+    result = []
+    for g in groups:
+        tracks_json = [_track_json(t) for t in g.tracks]
+        result.append({"reason": g.reason, "tracks": tracks_json, "suggested_keep": suggest_keep(tracks_json)})
+    return jsonify(groups=result, removed_folder=removed_duplicates_folder())
+
+
+@app.route("/api/duplicates/remove", methods=["POST"])
+def api_duplicates_remove():
+    """Remove the chosen copies from Serato (database + crates), after a
+    full backup. Body: {serato_dir, file_action: "move"|"keep",
+    groups: [{keep: path, remove: [path, ...]}, ...]}. The server re-checks
+    every choice against a fresh duplicate scan before writing anything."""
+    data = request.get_json(force=True)
+    serato_dir = (data.get("serato_dir") or "").strip()
+    if not serato_dir:
+        return jsonify(error="serato_dir is required"), 400
+    try:
+        plans = [
+            RemovalPlan(keep=str(g["keep"]), remove=[str(p) for p in g.get("remove", [])])
+            for g in data.get("groups", [])
         ]
+    except (KeyError, TypeError):
+        return jsonify(error="Each group needs a keep path and a remove list"), 400
+    try:
+        outcome = remove_duplicates(serato_dir, plans, file_action=data.get("file_action", "move"))
+    except DedupeError as exc:
+        return jsonify(error=str(exc)), 400
+    _LIBRARY_CACHE.clear()
+    return jsonify(
+        ok=True,
+        backup_id=outcome.backup_id,
+        removed_from_database=outcome.removed_from_database,
+        crates_updated=outcome.crates_updated,
+        files_moved=outcome.files_moved,
+        file_errors=outcome.file_errors,
+        removed_folder=removed_duplicates_folder(),
     )
+
+
+@app.route("/api/duplicates/backups", methods=["GET"])
+def api_duplicates_backups():
+    return jsonify(backups=list_serato_backups())
+
+
+@app.route("/api/duplicates/undo", methods=["POST"])
+def api_duplicates_undo():
+    data = request.get_json(force=True)
+    try:
+        outcome = restore_serato_backup((data.get("backup_id") or "").strip())
+    except DedupeError as exc:
+        return jsonify(error=str(exc)), 400
+    _LIBRARY_CACHE.clear()
+    return jsonify(ok=True, **outcome)
 
 
 @app.route("/api/yearcheck/start", methods=["POST"])

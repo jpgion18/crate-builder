@@ -28,6 +28,7 @@ $("scan_dupes_btn").addEventListener("click", async () => {
     return;
   }
   setStatus($("dupes_status"), "Scanning...");
+  setStatus($("dupes_remove_status"), "");
   $("dupes_results").innerHTML = "";
   try {
     const res = await fetch("/api/duplicates", {
@@ -53,32 +54,200 @@ function trackAnnotation(t) {
   return bits.join(" · ");
 }
 
+function formatSize(bytes) {
+  if (bytes == null) return "file missing";
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+// One entry per rendered group: { group, selected, keep }.
+let dupeChoices = [];
+
 function renderDuplicateGroups(groups) {
   const container = $("dupes_results");
   container.innerHTML = "";
-  groups.forEach((group) => {
+  hideDupesConfirm();
+  // Exact matches start ticked; "likely" (fuzzy) matches start unticked so
+  // nothing a human hasn't looked at gets queued for removal by default.
+  dupeChoices = groups.map((group) => ({
+    group,
+    selected: group.reason === "exact",
+    keep: group.suggested_keep || group.tracks[0].path,
+  }));
+  $("dupes_actions").classList.toggle("hidden", groups.length === 0);
+
+  dupeChoices.forEach((choice, gi) => {
+    const { group } = choice;
     const div = document.createElement("div");
     div.className = "crate";
 
     const header = document.createElement("div");
     header.className = "crate-header";
     header.innerHTML = `
-      <div>
+      <label>
+        <input type="checkbox" data-group="${gi}" ${choice.selected ? "checked" : ""} />
         <span class="crate-tag">${group.reason === "exact" ? "exact match" : "likely match"}</span>
         <span class="crate-title">${escapeHtml(group.tracks[0].artist)} – ${escapeHtml(group.tracks[0].title)}</span>
-      </div>
-      <span class="crate-meta">${group.tracks.length} files</span>
+      </label>
+      <span class="crate-meta">${group.tracks.length} copies</span>
     `;
     div.appendChild(header);
 
     const list = document.createElement("div");
     list.className = "crate-tracks";
-    list.textContent = group.tracks.map((t) => `${t.path}  [${trackAnnotation(t)}]`).join("\n");
+    group.tracks.forEach((t, ti) => {
+      const row = document.createElement("label");
+      row.className = "dupe-row";
+      row.innerHTML = `
+        <input type="radio" name="keep_${gi}" value="${ti}" ${t.path === choice.keep ? "checked" : ""} title="Keep this copy" />
+        <span>
+          <span class="dupe-path">${escapeHtml(t.path)}</span><br />
+          <span class="dupe-meta">${escapeHtml(trackAnnotation(t))} · ${formatSize(t.file_size)} · in ${t.crate_count} crate(s)</span>
+        </span>
+      `;
+      row.querySelector("input").addEventListener("change", () => {
+        choice.keep = t.path;
+        refreshGroupRows(div, choice);
+        hideDupesConfirm();
+      });
+      list.appendChild(row);
+    });
     div.appendChild(list);
 
+    header.querySelector("input[type=checkbox]").addEventListener("change", (e) => {
+      choice.selected = e.target.checked;
+      refreshGroupRows(div, choice);
+      hideDupesConfirm();
+    });
+
+    refreshGroupRows(div, choice);
     container.appendChild(div);
   });
 }
+
+function refreshGroupRows(div, choice) {
+  div.querySelectorAll(".dupe-row").forEach((row, ti) => {
+    const t = choice.group.tracks[ti];
+    row.classList.toggle("removing", choice.selected && t.path !== choice.keep);
+  });
+}
+
+function selectedPlans() {
+  return dupeChoices
+    .filter((c) => c.selected)
+    .map((c) => ({ keep: c.keep, remove: c.group.tracks.map((t) => t.path).filter((p) => p !== c.keep) }))
+    .filter((p) => p.remove.length);
+}
+
+function hideDupesConfirm() {
+  $("dupes_confirm").classList.add("hidden");
+}
+
+$("dupes_review_btn").addEventListener("click", () => {
+  const plans = selectedPlans();
+  if (!plans.length) {
+    setStatus($("dupes_remove_status"), "Tick at least one group first.", true);
+    return;
+  }
+  setStatus($("dupes_remove_status"), "");
+  const removeCount = plans.reduce((n, p) => n + p.remove.length, 0);
+  const moving = $("dupes_file_action").value === "move";
+  const lines = [
+    `${removeCount} track(s) will be removed from Serato across ${plans.length} group(s).`,
+    "Crates that had a removed copy will get the kept copy instead.",
+    moving
+      ? "Their files will be moved to the Crate Builder Removed Duplicates folder (not deleted)."
+      : "Their files will stay where they are on disk.",
+    "Your Serato database and crates are backed up first; undo from Past cleanups.",
+    "Make sure Serato DJ is closed.",
+    "",
+    ...plans.flatMap((p) => [`KEEP    ${p.keep}`, ...p.remove.map((r) => `REMOVE  ${r}`), ""]),
+  ];
+  $("dupes_summary").textContent = lines.join("\n");
+  $("dupes_confirm").classList.remove("hidden");
+});
+
+$("dupes_cancel_btn").addEventListener("click", hideDupesConfirm);
+
+$("dupes_confirm_btn").addEventListener("click", async () => {
+  const plans = selectedPlans();
+  $("dupes_confirm_btn").disabled = true;
+  setStatus($("dupes_remove_status"), "Backing up and removing...");
+  try {
+    const res = await fetch("/api/duplicates/remove", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ serato_dir: seratoDir(), file_action: $("dupes_file_action").value, groups: plans }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Removal failed");
+    hideDupesConfirm();
+    let msg = `Removed ${data.removed_from_database} track(s) from Serato, updated ${data.crates_updated.length} crate(s)`;
+    if (data.files_moved.length) msg += `, moved ${data.files_moved.length} file(s) to ${data.removed_folder}`;
+    msg += ".";
+    if (data.file_errors.length) msg += ` ${data.file_errors.length} file problem(s): ${data.file_errors.join("; ")}`;
+    setStatus($("dupes_remove_status"), msg, data.file_errors.length > 0);
+    $("dupes_results").innerHTML = "";
+    setStatus($("dupes_status"), "Scan again to check what's left.");
+    dupeChoices = [];
+    loadSeratoBackups();
+  } catch (err) {
+    setStatus($("dupes_remove_status"), err.message, true);
+  } finally {
+    $("dupes_confirm_btn").disabled = false;
+  }
+});
+
+function formatBackupId(id) {
+  // 20261124-013000-123456 -> 2026-11-24 01:30
+  const m = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})/.exec(id || "");
+  return m ? `${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}` : id;
+}
+
+async function loadSeratoBackups() {
+  const res = await fetch("/api/duplicates/backups");
+  const data = await res.json();
+  const tbody = document.querySelector("#serato_backups_table tbody");
+  tbody.innerHTML = "";
+  const backups = data.backups || [];
+  backups.forEach((b) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${escapeHtml(formatBackupId(b.backup_id))}</td><td>${b.removed_count}</td><td>${b.moved_count}</td><td></td>`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "secondary";
+    btn.textContent = b.restored ? "Undone" : "Undo";
+    btn.disabled = b.restored;
+    btn.addEventListener("click", async () => {
+      setStatus($("serato_backups_status"), "Restoring Serato library...");
+      try {
+        const res = await fetch("/api/duplicates/undo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ backup_id: b.backup_id }),
+        });
+        const out = await res.json();
+        if (!res.ok) throw new Error(out.error || "Undo failed");
+        const problems = out.file_errors || [];
+        setStatus(
+          $("serato_backups_status"),
+          problems.length ? `Restored, but: ${problems.join("; ")}` : "Restored. Open Serato to check.",
+          problems.length > 0
+        );
+        loadSeratoBackups();
+      } catch (err) {
+        setStatus($("serato_backups_status"), err.message, true);
+      }
+    });
+    tr.lastElementChild.appendChild(btn);
+    tbody.appendChild(tr);
+  });
+  if (!backups.length) setStatus($("serato_backups_status"), "No cleanups yet.");
+  else if ($("serato_backups_status").textContent === "No cleanups yet.") setStatus($("serato_backups_status"), "");
+}
+
+$("refresh_serato_backups_btn").addEventListener("click", loadSeratoBackups);
+loadSeratoBackups();
 
 // ---- Metadata editor ----
 

@@ -50,13 +50,50 @@
         sees, no library folder needed for this part. Groups tracks that
         look like the same song: exact matches after normalizing
         case/punctuation, plus close variants (like a missing
-        featured-artist credit) that share the same title. This only
-        <em>finds</em> duplicates; nothing gets deleted automatically —
-        review each group and remove files yourself in Finder/Explorer using
-        the paths shown.
+        featured-artist credit) that share the same title.
+      </p>
+      <p class="subtitle">
+        To clean up, tick the groups you want to fix and pick the copy to
+        <strong>keep</strong> in each (the best guess is preselected: a file
+        that exists, in the most crates, biggest file). The other copies are
+        removed from Serato's library, and every crate that had them gets
+        the kept copy instead, so no crate loses a song. Before anything is
+        written, your Serato database and crates are backed up, and you can
+        undo any cleanup below. Files are never deleted: they're moved to a
+        "Crate Builder Removed Duplicates" folder in your home folder for
+        you to check and empty yourself. <strong>Quit Serato DJ first</strong>
+        — it saves its library when it closes and would undo the cleanup.
       </p>
       <span id="dupes_status" class="status"></span>
       <div id="dupes_results"></div>
+      <div id="dupes_actions" class="hidden">
+        <div class="field">
+          <label for="dupes_file_action">Removed copies' files</label>
+          <select id="dupes_file_action">
+            <option value="move" selected>Move to the Removed Duplicates folder (recommended)</option>
+            <option value="keep">Leave on disk, only remove from Serato</option>
+          </select>
+        </div>
+        <button id="dupes_review_btn" type="button">Review Removal</button>
+        <div id="dupes_confirm" class="hidden">
+          <div id="dupes_summary" class="crate-tracks"></div>
+          <button id="dupes_confirm_btn" type="button" class="danger">Remove From Serato</button>
+          <button id="dupes_cancel_btn" type="button" class="secondary">Cancel</button>
+        </div>
+        <span id="dupes_remove_status" class="status"></span>
+      </div>
+
+      <div class="results_header">
+        <h3>Past cleanups</h3>
+        <button id="refresh_serato_backups_btn" type="button" class="secondary">Refresh</button>
+      </div>
+      <table id="serato_backups_table">
+        <thead>
+          <tr><th>When</th><th>Removed</th><th>Files moved</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <span id="serato_backups_status" class="status"></span>
     </section>
 
     <section class="panel">
